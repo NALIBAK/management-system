@@ -25,6 +25,18 @@
 
 ---
 
+## 🛠️ Technology Stack
+
+| Component | Technology | Description |
+|-----------|------------|-------------|
+| **Frontend** | HTML, CSS, JavaScript | Vanilla implementation for maximum control and speed. |
+| **Backend** | Python (FastAPI/Flask) | Lightweight and efficient backend. FastAPI recommended for async support. |
+| **Database** | MySQL (XAMPP) | Relational database for structured data. |
+| **AI Integration** | Ollama (Llama 3.2) | Local LLM for privacy and cost-efficiency. |
+| **Orchestration** | Python Scripts | Custom scripts for database management and AI interaction. |
+
+---
+
 ## 👥 User Roles & Access Levels
 
 | Role | Access Scope |
