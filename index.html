@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow — College Management System</title>
+    <meta name="description"
+        content="CampusFlow - A modern college management system dashboard with AI-powered assistant AIRA">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="ri-graduation-cap-fill"></i>
+                </div>
+                <span class="logo-text">CampusFlow</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="ri-menu-fold-line"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-section-title">MAIN</span>
+                <a href="#" class="nav-item active">
+                    <i class="ri-dashboard-3-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-user-3-line"></i>
+                    <span>Students</span>
+                    <span class="nav-badge">2,450</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-team-line"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-building-2-line"></i>
+                    <span>Departments</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <span class="nav-section-title">ACADEMICS</span>
+                <a href="#" class="nav-item">
+                    <i class="ri-book-open-line"></i>
+                    <span>Courses</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-calendar-check-line"></i>
+                    <span>Attendance</span>
+                    <span class="nav-badge hot">Live</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-file-list-3-line"></i>
+                    <span>Marks</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-time-line"></i>
+                    <span>Timetable</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <span class="nav-section-title">MANAGEMENT</span>
+                <a href="#" class="nav-item">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    <span>Fees</span>
+                    <span class="nav-badge warn">₹2.3L</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-bar-chart-grouped-line"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">
+                    <span>SA</span>
+                    <span class="status-dot"></span>
+                </div>
+                <div class="user-info">
+                    <span class="user-name">Super Admin</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+                <i class="ri-more-2-fill"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="ri-menu-line"></i>
+                </button>
+                <div class="search-box">
+                    <i class="ri-search-line"></i>
+                    <input type="text" placeholder="Search students, staff, courses..." id="globalSearch">
+                    <kbd>⌘K</kbd>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div class="top-bar-item" id="academicYear">
+                    <i class="ri-calendar-line"></i>
+                    <span>2025-2026</span>
+                    <i class="ri-arrow-down-s-line"></i>
+                </div>
+                <button class="top-bar-btn" id="notifBtn">
+                    <i class="ri-notification-3-line"></i>
+                    <span class="notif-dot"></span>
+                </button>
+                <button class="top-bar-btn">
+                    <i class="ri-fullscreen-line"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-text">
+                    <h1>Good Afternoon, Admin 👋</h1>
+                    <p>Here's what's happening at your college today.</p>
+                </div>
+                <div class="welcome-actions">
+                    <button class="btn-primary">
+                        <i class="ri-add-line"></i> Quick Add
+                    </button>
+                    <button class="btn-ghost">
+                        <i class="ri-download-2-line"></i> Export Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" style="--accent: #6366f1; --accent-glow: rgba(99,102,241,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-user-3-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Students</span>
+                        <div class="stat-value-row">
+                            <span class="stat-value" data-count="2450">0</span>
+                            <span class="stat-change up"><i class="ri-arrow-up-line"></i> 12%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 78%; background: #6366f1;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="--accent: #06b6d4; --accent-glow: rgba(6,182,212,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-team-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Staff</span>
+                        <div class="stat-value-row">
+                            <span class="stat-value" data-count="186">0</span>
+                            <span class="stat-change up"><i class="ri-arrow-up-line"></i> 3%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 62%; background: #06b6d4;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="--accent: #10b981; --accent-glow: rgba(16,185,129,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-calendar-check-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Today's Attendance</span>
+                        <div class="stat-value-row">
+                            <span class="stat-value" data-count="87">0</span><span class="stat-suffix">%</span>
+                            <span class="stat-change up"><i class="ri-arrow-up-line"></i> 2.4%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 87%; background: #10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="--accent: #f59e0b; --accent-glow: rgba(245,158,11,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-money-dollar-circle-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Fee Collected</span>
+                        <div class="stat-value-row">
+                            <span class="stat-prefix">₹</span><span class="stat-value" data-count="42">0</span><span
+                                class="stat-suffix">L</span>
+                            <span class="stat-change up"><i class="ri-arrow-up-line"></i> 18%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 71%; background: #f59e0b;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="--accent: #ec4899; --accent-glow: rgba(236,72,153,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-building-2-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Departments</span>
+                        <div class="stat-value-row">
+                            <span class="stat-value" data-count="8">0</span>
+                            <span class="stat-change neutral"><i class="ri-subtract-line"></i> 0%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 100%; background: #ec4899;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="--accent: #8b5cf6; --accent-glow: rgba(139,92,246,0.15);">
+                    <div class="stat-icon">
+                        <i class="ri-book-open-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Active Courses</span>
+                        <div class="stat-value-row">
+                            <span class="stat-value" data-count="24">0</span>
+                            <span class="stat-change up"><i class="ri-arrow-up-line"></i> 4%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 85%; background: #8b5cf6;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-card large">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Attendance Overview</h3>
+                            <p>Daily attendance trend this semester</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="chip active">Week</button>
+                            <button class="chip">Month</button>
+                            <button class="chip">Semester</button>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Students by Department</h3>
+                            <p>Current academic year</p>
+                        </div>
+                        <button class="icon-btn"><i class="ri-more-2-fill"></i></button>
+                    </div>
+                    <div class="chart-body donut-container">
+                        <canvas id="deptChart"></canvas>
+                        <div class="donut-center">
+                            <span class="donut-value">2,450</span>
+                            <span class="donut-label">Total</span>
+                        </div>
+                    </div>
+                    <div class="dept-legend" id="deptLegend"></div>
+                </div>
+            </div>
+
+            <!-- Bottom Row -->
+            <div class="bottom-row">
+                <!-- Fee Collection Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Fee Collection</h3>
+                            <p>Monthly collection vs target</p>
+                        </div>
+                        <div class="chart-actions">
+                            <span class="legend-dot" style="--c: #6366f1"></span> Collected
+                            <span class="legend-dot" style="--c: rgba(99,102,241,0.25)"></span> Target
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="feeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="chart-card activity-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Recent Activity</h3>
+                            <p>Latest actions in the system</p>
+                        </div>
+                        <a href="#" class="view-all">View All <i class="ri-arrow-right-line"></i></a>
+                    </div>
+                    <div class="activity-list">
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #6366f1;">
+                                <i class="ri-user-add-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>12 new students</strong> enrolled in CSE Batch
+                                    2025</span>
+                                <span class="activity-time">2 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #10b981;">
+                                <i class="ri-calendar-check-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>Attendance submitted</strong> for ECE-A, Period
+                                    3</span>
+                                <span class="activity-time">15 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #f59e0b;">
+                                <i class="ri-money-dollar-circle-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>₹1.2L fee payment</strong> received from Mech Batch
+                                    2023</span>
+                                <span class="activity-time">1 hour ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #ec4899;">
+                                <i class="ri-file-list-3-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>Internal marks uploaded</strong> for CS302 — Data
+                                    Structures</span>
+                                <span class="activity-time">2 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #8b5cf6;">
+                                <i class="ri-robot-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>AIRA generated</strong> attendance report for IT
+                                    Department</span>
+                                <span class="activity-time">3 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon" style="--c: #06b6d4;">
+                                <i class="ri-time-line"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-text"><strong>Timetable updated</strong> for CSE 4th Sem — Room
+                                    B204</span>
+                                <span class="activity-time">5 hours ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Row -->
+            <div class="quick-actions-row">
+                <h3 class="section-title">Quick Actions</h3>
+                <div class="quick-actions-grid">
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #6366f1;"><i class="ri-user-add-line"></i></div>
+                        <span>Add Student</span>
+                    </button>
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #06b6d4;"><i class="ri-team-line"></i></div>
+                        <span>Add Staff</span>
+                    </button>
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #10b981;"><i class="ri-calendar-check-line"></i></div>
+                        <span>Mark Attendance</span>
+                    </button>
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #f59e0b;"><i class="ri-file-edit-line"></i></div>
+                        <span>Enter Marks</span>
+                    </button>
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #ec4899;"><i class="ri-money-dollar-circle-line"></i></div>
+                        <span>Record Fee</span>
+                    </button>
+                    <button class="quick-action-card">
+                        <div class="qa-icon" style="--c: #8b5cf6;"><i class="ri-bar-chart-grouped-line"></i></div>
+                        <span>Generate Report</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============ AIRA CHAT ============ -->
+    <div class="aira-fab" id="airaFab">
+        <div class="aira-fab-pulse"></div>
+        <div class="aira-fab-icon">
+            <i class="ri-robot-2-line"></i>
+        </div>
+        <div class="aira-fab-badge">AI</div>
+    </div>
+
+    <div class="aira-panel" id="airaPanel">
+        <div class="aira-header">
+            <div class="aira-header-left">
+                <div class="aira-avatar">
+                    <i class="ri-robot-2-fill"></i>
+                    <span class="aira-status-dot"></span>
+                </div>
+                <div>
+                    <h4>AIRA</h4>
+                    <span class="aira-subtitle">
+                        <span class="aira-model-dot"></span>
+                        <span id="airaModelLabel">Gemini Pro</span> · Online
+                    </span>
+                </div>
+            </div>
+            <div class="aira-header-right">
+                <button class="aira-header-btn" id="airaSettingsBtn" title="Settings">
+                    <i class="ri-settings-3-line"></i>
+                </button>
+                <button class="aira-header-btn" id="airaMinimize" title="Minimize">
+                    <i class="ri-subtract-line"></i>
+                </button>
+                <button class="aira-header-btn" id="airaClose" title="Close">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- AIRA Settings Panel -->
+        <div class="aira-settings" id="airaSettings">
+            <div class="aira-settings-header">
+                <h5>AI Model Settings</h5>
+                <button class="aira-header-btn" id="airaSettingsClose"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="aira-settings-body">
+                <div class="setting-group">
+                    <label>API Provider</label>
+                    <div class="setting-toggle">
+                        <button class="setting-opt active" data-provider="cloud">
+                            <i class="ri-cloud-line"></i> Cloud (Gemini)
+                        </button>
+                        <button class="setting-opt" data-provider="local">
+                            <i class="ri-computer-line"></i> Local (Ollama)
+                        </button>
+                    </div>
+                </div>
+                <div class="setting-group" id="apiKeyGroup">
+                    <label>Google Gemini API Key</label>
+                    <div class="setting-input-wrap">
+                        <input type="password" placeholder="Enter your API key..." id="apiKeyInput"
+                            class="setting-input">
+                        <button class="setting-input-btn" id="toggleApiKey"><i class="ri-eye-line"></i></button>
+                    </div>
+                </div>
+                <div class="setting-group" id="modelSelectGroup">
+                    <label>Select Model</label>
+                    <select class="setting-select" id="modelSelect">
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                        <option value="gemini-1.5-pro" selected>Gemini 1.5 Pro</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    </select>
+                </div>
+                <button class="btn-primary full-w" id="saveSettings">
+                    <i class="ri-save-line"></i> Save Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- AIRA Chat Messages -->
+        <div class="aira-messages" id="airaMessages">
+            <div class="aira-welcome">
+                <div class="aira-welcome-icon">
+                    <i class="ri-robot-2-fill"></i>
+                </div>
+                <h4>Hi! I'm AIRA 👋</h4>
+                <p>Your AI-powered college assistant. I can help you manage data, generate reports, and perform actions
+                    — just ask!</p>
+                <div class="aira-suggestions">
+                    <button class="aira-suggestion" data-msg="Show today's attendance summary">
+                        <i class="ri-calendar-check-line"></i> Today's attendance
+                    </button>
+                    <button class="aira-suggestion" data-msg="List students with attendance below 75%">
+                        <i class="ri-alert-line"></i> Low attendance students
+                    </button>
+                    <button class="aira-suggestion" data-msg="Generate fee defaulters report for CSE">
+                        <i class="ri-file-chart-line"></i> Fee defaulters report
+                    </button>
+                    <button class="aira-suggestion" data-msg="What's the average GPA for 2023 batch?">
+                        <i class="ri-bar-chart-box-line"></i> Batch GPA analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AIRA Input -->
+        <div class="aira-input-area">
+            <div class="aira-context-bar" id="airaContext">
+                <i class="ri-compass-3-line"></i>
+                <span>Context: <strong>Admin Dashboard</strong></span>
+            </div>
+            <div class="aira-input-wrap">
+                <button class="aira-attach-btn" title="Attach file">
+                    <i class="ri-attachment-2"></i>
+                </button>
+                <input type="text" placeholder="Ask AIRA anything..." id="airaInput" autocomplete="off">
+                <button class="aira-send-btn" id="airaSendBtn">
+                    <i class="ri-send-plane-2-fill"></i>
+                </button>
+            </div>
+            <div class="aira-powered">
+                <span>Powered by</span>
+                <span class="aira-powered-model" id="airaPoweredModel">Google Gemini</span>
+                <span>·</span>
+                <span>Role: Super Admin</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
