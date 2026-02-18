@@ -32,12 +32,12 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">First Name <span class="required">*</span></label>
-                                    <input type="text" id="first-name" class="form-control" required>
+                                    <label class="form-label">Employee ID <span class="required">*</span></label>
+                                    <input type="text" id="employee-id" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Last Name <span class="required">*</span></label>
-                                    <input type="text" id="last-name" class="form-control" required>
+                                    <label class="form-label">Full Name <span class="required">*</span></label>
+                                    <input type="text" id="name" class="form-control" required>
                                 </div>
                             </div>
 
@@ -52,6 +52,19 @@
                                 </div>
                             </div>
 
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Designation <span class="required">*</span></label>
+                                    <input type="text" id="designation" class="form-control" required
+                                        placeholder="e.g. Assistant Professor">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Qualification</label>
+                                    <input type="text" id="qualification" class="form-control"
+                                        placeholder="e.g. M.Tech, Ph.D">
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label class="form-label">Department <span class="required">*</span></label>
                                 <select id="dept-id" class="form-control" required>
@@ -63,8 +76,13 @@
                                 <label class="form-label">Role <span class="required">*</span></label>
                                 <select id="role-id" class="form-control" required>
                                     <option value="">Select Role</option>
-                                    <!-- Populated dynamically via JS if needed, or hardcoded if simple -->
                                 </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="create-account" checked> Create Login Account?
+                                </label>
                             </div>
 
                             <div class="form-actions">
@@ -128,14 +146,14 @@
             const res = await api.get(`/staff/${staffId}`);
             if (res?.ok) {
                 const s = res.data.data;
-                document.getElementById('first-name').value = s.first_name;
-                document.getElementById('last-name').value = s.last_name;
+                document.getElementById('employee-id').value = s.employee_id;
+                document.getElementById('name').value = s.name;
                 document.getElementById('email').value = s.email;
                 document.getElementById('phone').value = s.phone;
+                document.getElementById('designation').value = s.designation || '';
+                document.getElementById('qualification').value = s.qualification || '';
                 document.getElementById('dept-id').value = s.department_id;
-                // document.getElementById('role-id').value = s.user_account?.role_id; // Need to fetch role separately or from joined user table
-                // For now, assuming staff role management is separate or implicit? No, usually explicit.
-                // If endpoint returns role_id, set it.
+                document.getElementById('create-account').checked = false; // Don't recreate by default on edit
                 if (s.user_account && s.user_account.role_id) {
                     document.getElementById('role-id').value = s.user_account.role_id;
                 }
@@ -149,18 +167,18 @@
             btn.textContent = 'Saving...';
 
             const data = {
-                first_name: document.getElementById('first-name').value,
-                last_name: document.getElementById('last-name').value,
+                employee_id: document.getElementById('employee-id').value,
+                name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
+                designation: document.getElementById('designation').value,
+                qualification: document.getElementById('qualification').value,
                 department_id: document.getElementById('dept-id').value,
-                role_id: document.getElementById('role-id').value, // Need to handle creating user account too?
+                role_id: document.getElementById('role-id').value,
+                create_account: document.getElementById('create-account').checked,
+                password: 'password123', // Default password for now, or let user set it
                 college_id: 1 // Default college
             };
-
-            // Assuming separate endpoints or one?
-            // Usually POST /staff creates staff AND user account if logic exists in backend
-            // Let's check backend route for staff creation.
 
             const res = staffId
                 ? await api.put(`/staff/${staffId}`, data)

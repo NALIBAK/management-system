@@ -34,6 +34,12 @@ def get_staff_member(staff_id):
 @roles_required("super_admin", "admin")
 def add_staff():
     data = request.get_json()
+    
+    # Check if employee_id already exists
+    existing = query("SELECT staff_id FROM staff WHERE employee_id=%s", (data["employee_id"],), fetchone=True)
+    if existing:
+        return error("Employee ID already exists", 400)
+
     sid = execute("""INSERT INTO staff
         (employee_id, name, email, phone, gender, designation, qualification, department_id, joining_date, status)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
@@ -43,17 +49,18 @@ def add_staff():
 
     # Create user account
     if data.get("create_account"):
-        role_name = "hod" if data.get("is_hod") else "staff"
-        role = query("SELECT role_id FROM role WHERE role_name=%s", (role_name,), fetchone=True)
+        # Use provided role_id or fallback to HOD logic
+        role_id = data.get("role_id")
+        if not role_id:
+            role_name = "hod" if data.get("is_hod") else "staff"
+            role = query("SELECT role_id FROM role WHERE role_name=%s", (role_name,), fetchone=True)
+            if role:
+                role_id = role["role_id"]
         
-        if role:
+        if role_id:
             execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
                        VALUES (%s, %s, %s, %s, 'staff', 1)""",
-                    (data["employee_id"], hash_password(data.get("password", data["employee_id"])), role["role_id"], sid))
-        else:
-             # Fallback or log error if role doesn't exist? For now, just skip or maybe error?
-             # Better to ensure migration/seed has roles.
-             pass
+                    (data["employee_id"], hash_password(data.get("password", data["employee_id"])), role_id, sid))
     return success({"staff_id": sid}, "Staff added", 201)
 
 @staff_bp.route("/<int:staff_id>", methods=["PUT"])
