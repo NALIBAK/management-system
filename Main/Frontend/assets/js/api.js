@@ -28,7 +28,7 @@ const api = {
       const res = await fetch(url, config);
       const data = await res.json();
 
-      if (res.status === 401) {
+      if (res.status === 401 && !endpoint.includes('/auth/login')) {
         // Token expired — redirect to login
         localStorage.removeItem('cms_token');
         localStorage.removeItem('cms_user');

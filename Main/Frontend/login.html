@@ -141,6 +141,7 @@
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      console.log('Login form submitted');
       const btn = document.getElementById('login-btn');
       const errEl = document.getElementById('login-error');
       errEl.style.display = 'none';
@@ -151,14 +152,27 @@
       btn.disabled = true;
       btn.textContent = 'Signing in...';
 
-      const res = await api.post('/auth/login', { username, password });
+      try {
+        console.log('Sending login request for:', username);
+        const res = await api.post('/auth/login', { username, password });
+        console.log('Login response:', res);
 
-      if (res && res.ok && res.data.success) {
-        auth.setSession(res.data.data.token, res.data.data.user);
-        window.location.href = 'dashboard.html';
-      } else {
-        errEl.textContent = res?.data?.message || 'Login failed. Please try again.';
-        errEl.style.display = 'block';
+        if (res && res.ok && res.data.success) {
+          console.log('Login successful, redirecting...');
+          auth.setSession(res.data.data.token, res.data.data.user);
+          window.location.href = 'dashboard.html';
+        } else {
+          console.error('Login failed:', res);
+          const msg = res?.data?.message || 'Login failed. Please try again.';
+          errEl.textContent = msg;
+          errEl.style.display = 'block';
+          alert('Login Failed: ' + msg); // Temporary alert for debugging
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+        }
+      } catch (err) {
+        console.error('Login exception:', err);
+        alert('Login Error: ' + err.message);
         btn.disabled = false;
         btn.textContent = 'Sign In';
       }
