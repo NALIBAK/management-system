@@ -26,7 +26,7 @@ const auth = {
 
     requireAuth() {
         if (!this.isLoggedIn()) {
-            window.location.href = '/Main/Frontend/login.html';
+            window.location.href = '/management-system/Main/Frontend/login.html';
             return false;
         }
         return true;
@@ -34,7 +34,7 @@ const auth = {
 
     requireGuest() {
         if (this.isLoggedIn()) {
-            window.location.href = '/Main/Frontend/dashboard.html';
+            window.location.href = '/management-system/Main/Frontend/dashboard.html';
             return false;
         }
         return true;
@@ -48,7 +48,7 @@ const auth = {
     async logout() {
         try { await api.post('/auth/logout'); } catch { }
         this.clearSession();
-        window.location.href = '/Main/Frontend/login.html';
+        window.location.href = '/management-system/Main/Frontend/login.html';
     },
 
     getUserInitials() {
