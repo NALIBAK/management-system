@@ -133,7 +133,51 @@
 - **Primary (Cloud):** Google Gemini API — user enters API key in settings
 - **Fallback (Local):** Ollama with Llama 3.2 — used when no API key provided
 - **Model Selection:** If API key is provided, fetch available models from the API and let user select their preferred model
-- **MCP Integration:** Uses Model Context Protocol to interact with app data — same tool-calling pattern for both local and cloud models
+- **MCP Integration:** Uses Model Context Protocol to interact with app data.
+- **MCP Communication Flow:**
+  1.  **User Request**: User sends a prompt to AIRA (e.g., "Update attendance for Student X").
+  2.  **AIRA Processing**: AIRA analyzes the intent and identifies the required tool (e.g., `update_attendance`).
+  3.  **Tool Call**: AIRA constructs a JSON-RPC request for the tool.
+  4.  **MCP Client (App)**: The frontend app acts as the MCP Client, receiving the tool call.
+  5.  **MCP Server (Backend)**: The request is forwarded to the backend MCP Server.
+  6.  **DB Interaction**: The MCP Server executes the database query.
+  7.  **Response**: The result is sent back up the chain (DB -> Server -> Client -> AIRA).
+  8.  **Final Answer**: AIRA formulates a natural language response for the user.
+- **MCP Tool Schema Examples:**
+  ```json
+  // get_student_info
+  {
+    "name": "get_student_info",
+    "description": "Retrieve student details by ID or Name",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "student_identifier": {"type": "string", "description": "Student ID or Name"}
+      },
+      "required": ["student_identifier"]
+    }
+  }
+
+  // update_attendance
+  {
+    "name": "update_attendance",
+    "description": "Update attendance status for a student",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "student_id": {"type": "integer"},
+        "date": {"type": "string", "format": "date"},
+        "status": {"type": "string", "enum": ["Present", "Absent", "Late"]}
+      },
+      "required": ["student_id", "date", "status"]
+    }
+  }
+  ```
+- **Additional MCP Integrations:**
+  - **File System MCP**: Allow AIRA to directly interact with the server's file system to:
+    -   Organize generated reports into specific folders (e.g., `/reports/semester_1/`).
+    -   List available report files for download.
+    -   Read log files for system debugging (Admin only).
 
 #### AIRA Capabilities
 - **Data Queries:** "Show me CSE 3rd sem attendance below 75%"
@@ -148,6 +192,27 @@
 - Passes current page context (route, selected filters, active section) to LLM
 - Action execution pipeline: User prompt → LLM plans action → Preview shown → User confirms → Execute via API → Show result
 - All AIRA actions logged for audit trail
+
+### Module 12: Parent Notification & Communication
+
+> [!NOTE]
+> This module is designed for staff to send customized academic updates to parents. It is distinct from the general notice board.
+
+- **Communication Channels:**
+  - **SMS / WhatsApp:** For instant alerts (attendance shortage, unexpected absence).
+  - **Email:** For detailed reports (weekly performance, exam results).
+- **Customizable Templates:**
+  - Staff can create and save message templates.
+  - Supports dynamic placeholders: `{StudentName}`, `{RollNumber}`, `{AttendancePercentage}`, `{ExamName}`, `{MarksObtained}`, `{SubjectName}`.
+  - *Example:* "Dear Parent, {StudentName} has secured {MarksObtained} in {SubjectName} internal exam."
+- **Staff Control:**
+  - **Manual Trigger:** Staff selects a student (or filter a group), chooses a template, previews the message, edits if needed, and sends one-by-one or in bulk.
+  - **History & Logs:** specific "Sent Items" log for each staff member to track what was sent to whom.
+- **Access Control:**
+  - **Staff:** Can send notifications only to students in their assigned sections/classes.
+  - **HOD:** Can send to any student in the department.
+  - **Admin:** Can broadcast to the entire college.
+
 
 ---
 
@@ -585,9 +650,40 @@ erDiagram
 
 ---
 
+### ER 9: Parent Notification
+
+```mermaid
+erDiagram
+    STAFF ||--o{ NOTIFICATION_TEMPLATE : creates
+    STAFF ||--o{ NOTIFICATION_LOG : sends
+    STUDENT ||--o{ NOTIFICATION_LOG : receives
+
+    NOTIFICATION_TEMPLATE {
+        int template_id PK
+        int staff_id FK
+        string title
+        text content_template
+        string channel_type
+        datetime created_at
+    }
+    NOTIFICATION_LOG {
+        int log_id PK
+        int student_id FK
+        int sender_staff_id FK
+        string channel_type
+        text message_content
+        string status
+        datetime sent_at
+    }
+```
+
+---
+
+---
+
 ## 🗂️ Entity Details
 
-### All Entities (32 total)
+### All Entities (35 total)
 
 | # | Entity | Purpose | Key Attributes |
 |---|--------|---------|----------------|
@@ -624,6 +720,8 @@ erDiagram
 | 31 | **AIRA Message** | Individual chat messages | role, content, tool_calls, tool_results |
 | 32 | **AIRA Action Log** | Actions taken by AIRA | action_type, entity, status |
 | 33 | **LLM Config** | AI model configuration | provider, api_key, model, fallback |
+| 34 | **Notification Template** | Saved message formats | content_template, channel_type |
+| 35 | **Notification Log** | History of sent messages | student, sender, content, status |
 
 ---
 
@@ -639,6 +737,7 @@ erDiagram
 - **Student** → has **Marks**, **Attendance**, **Fee Payments**, **Semester Results**, **Scholarships**
 - **Fee Structure** → defined per **Course + Category + Semester**, broken into **Components**
 - **User Account** → has **AIRA Conversations**, **AIRA Action Logs**, **Activity Logs**
+- **Staff** → creates **Notification Templates**, sends **Notification Logs** to **Student**
 - **College** → has one **LLM Config** (cloud API key + fallback local model)
 
 ---
