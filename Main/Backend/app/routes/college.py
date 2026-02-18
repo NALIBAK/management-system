@@ -37,7 +37,7 @@ def add_department():
     data = request.get_json()
     dept_id = execute(
         "INSERT INTO department (college_id, name, code, hod_staff_id) VALUES (%s,%s,%s,%s)",
-        (data["college_id"], data["name"], data["code"], data.get("hod_staff_id"))
+        (data.get("college_id", 1), data["name"], data["code"], data.get("hod_staff_id"))
     )
     return success({"department_id": dept_id}, "Department created", 201)
 
@@ -68,7 +68,7 @@ def add_academic_year():
     data = request.get_json()
     ay_id = execute(
         "INSERT INTO academic_year (college_id, year_label, start_date, end_date, is_current) VALUES (%s,%s,%s,%s,%s)",
-        (data["college_id"], data["year_label"], data["start_date"], data["end_date"], data.get("is_current", False))
+        (data.get("college_id", 1), data["year_label"], data["start_date"], data["end_date"], data.get("is_current", False))
     )
     return success({"academic_year_id": ay_id}, "Academic year created", 201)
 

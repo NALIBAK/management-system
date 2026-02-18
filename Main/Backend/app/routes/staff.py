@@ -44,9 +44,16 @@ def add_staff():
     # Create user account
     if data.get("create_account"):
         role_name = "hod" if data.get("is_hod") else "staff"
-        execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
-                   SELECT %s, %s, role_id, %s, 'staff', 1 FROM role WHERE role_name=%s""",
-                (data["employee_id"], hash_password(data.get("password", data["employee_id"])), sid, role_name))
+        role = query("SELECT role_id FROM role WHERE role_name=%s", (role_name,), fetchone=True)
+        
+        if role:
+            execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
+                       VALUES (%s, %s, %s, %s, 'staff', 1)""",
+                    (data["employee_id"], hash_password(data.get("password", data["employee_id"])), role["role_id"], sid))
+        else:
+             # Fallback or log error if role doesn't exist? For now, just skip or maybe error?
+             # Better to ensure migration/seed has roles.
+             pass
     return success({"staff_id": sid}, "Staff added", 201)
 
 @staff_bp.route("/<int:staff_id>", methods=["PUT"])

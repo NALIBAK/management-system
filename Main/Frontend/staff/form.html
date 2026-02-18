@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Form — CMS</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/aira.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🎓</div>
+                <div class="logo-text">CMS <span>College Management</span></div>
+            </div>
+            <nav class="sidebar-nav"></nav>
+        </aside>
+        <div class="main-content">
+            <header class="header" id="page-header"></header>
+            <main class="page-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title" id="form-title">Add Staff</h3>
+                        <a href="index.html" class="btn btn-ghost btn-sm">← Back</a>
+                    </div>
+                    <div class="card-body">
+                        <form id="staff-form">
+                            <input type="hidden" id="staff-id">
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">First Name <span class="required">*</span></label>
+                                    <input type="text" id="first-name" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Last Name <span class="required">*</span></label>
+                                    <input type="text" id="last-name" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Email <span class="required">*</span></label>
+                                    <input type="email" id="email" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" id="phone" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Department <span class="required">*</span></label>
+                                <select id="dept-id" class="form-control" required>
+                                    <option value="">Select Department</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Role <span class="required">*</span></label>
+                                <select id="role-id" class="form-control" required>
+                                    <option value="">Select Role</option>
+                                    <!-- Populated dynamically via JS if needed, or hardcoded if simple -->
+                                </select>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="save-btn">Save Staff</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/sidebar.js"></script>
+    <script src="../assets/js/aira.js"></script>
+    <script>
+        auth.requireAuth();
+        renderSidebar('staff');
+        renderHeader('Staff', 'Manage staff members');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const staffId = urlParams.get('id');
+
+        async function loadOptions() {
+            // Load Departments
+            const depts = await api.get('/college/departments');
+            if (depts?.ok) {
+                const sel = document.getElementById('dept-id');
+                depts.data.data.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.department_id;
+                    opt.textContent = `${d.name} (${d.code})`;
+                    sel.appendChild(opt);
+                });
+            }
+
+            // Load Roles
+            const roles = await api.get('/college/roles');
+            if (roles?.ok) {
+                const sel = document.getElementById('role-id');
+                roles.data.data.forEach(r => {
+                    // Filter out student role if strictly for staff
+                    if (r.role_name !== 'student') {
+                        const opt = document.createElement('option');
+                        opt.value = r.role_id;
+                        opt.textContent = r.role_name; // capitalize?
+                        sel.appendChild(opt);
+                    }
+                });
+            }
+        }
+
+        async function loadStaff() {
+            if (!staffId) return;
+            document.getElementById('form-title').textContent = 'Edit Staff';
+            document.getElementById('staff-id').value = staffId;
+
+            const res = await api.get(`/staff/${staffId}`);
+            if (res?.ok) {
+                const s = res.data.data;
+                document.getElementById('first-name').value = s.first_name;
+                document.getElementById('last-name').value = s.last_name;
+                document.getElementById('email').value = s.email;
+                document.getElementById('phone').value = s.phone;
+                document.getElementById('dept-id').value = s.department_id;
+                // document.getElementById('role-id').value = s.user_account?.role_id; // Need to fetch role separately or from joined user table
+                // For now, assuming staff role management is separate or implicit? No, usually explicit.
+                // If endpoint returns role_id, set it.
+                if (s.user_account && s.user_account.role_id) {
+                    document.getElementById('role-id').value = s.user_account.role_id;
+                }
+            }
+        }
+
+        document.getElementById('staff-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const data = {
+                first_name: document.getElementById('first-name').value,
+                last_name: document.getElementById('last-name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                department_id: document.getElementById('dept-id').value,
+                role_id: document.getElementById('role-id').value, // Need to handle creating user account too?
+                college_id: 1 // Default college
+            };
+
+            // Assuming separate endpoints or one?
+            // Usually POST /staff creates staff AND user account if logic exists in backend
+            // Let's check backend route for staff creation.
+
+            const res = staffId
+                ? await api.put(`/staff/${staffId}`, data)
+                : await api.post('/staff', data);
+
+            if (res?.ok) {
+                utils.toast('Staff saved successfully!', 'success');
+                setTimeout(() => window.location.href = 'index.html', 1000);
+            } else {
+                utils.toast(res?.data?.message || 'Failed to save staff', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Save Staff';
+            }
+        });
+
+        (async () => {
+            await loadOptions();
+            await loadStaff();
+        })();
+    </script>
+</body>
+
+</html>

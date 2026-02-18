@@ -38,7 +38,7 @@ const api = {
 
       return { ok: res.ok, status: res.status, data };
     } catch (err) {
-      console.error('API Error:', err);
+      console.error('API Error Details:', err);
       return { ok: false, status: 0, data: { message: 'Network error. Is the backend running?' } };
     }
   },
