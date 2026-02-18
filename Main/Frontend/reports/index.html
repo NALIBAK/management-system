@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports — CMS</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/aira.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🎓</div>
+                <div class="logo-text">CMS <span>College Management</span></div>
+            </div>
+            <nav class="sidebar-nav"></nav>
+        </aside>
+        <div class="main-content">
+            <header class="header" id="page-header"></header>
+            <main class="page-content">
+                <div class="stat-grid mb-4">
+                    <div class="stat-card" style="cursor:pointer" onclick="loadReport('attendance-defaulters')">
+                        <div class="stat-icon orange">📉</div>
+                        <div class="stat-info">
+                            <div class="stat-value">Attendance</div>
+                            <div class="stat-label">Defaulters Report</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="cursor:pointer" onclick="loadReport('marks-summary')">
+                        <div class="stat-icon blue">📝</div>
+                        <div class="stat-info">
+                            <div class="stat-value">Marks</div>
+                            <div class="stat-label">Summary Report</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="cursor:pointer" onclick="loadReport('fee-defaulters')">
+                        <div class="stat-icon red">💸</div>
+                        <div class="stat-info">
+                            <div class="stat-value">Fee</div>
+                            <div class="stat-label">Defaulters Report</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="cursor:pointer" onclick="loadReport('department-summary')">
+                        <div class="stat-icon green">🏛️</div>
+                        <div class="stat-info">
+                            <div class="stat-value">Department</div>
+                            <div class="stat-label">Summary Report</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title" id="report-title">📊 Select a Report</h3>
+                        <div class="flex gap-2">
+                            <button class="btn btn-ghost btn-sm" id="export-btn" style="display:none"
+                                onclick="exportReport()">⬇️ Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="report-filters" style="display:none">
+                        <div class="form-row" id="filter-row"></div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="table" id="report-table">
+                            <thead id="report-thead"></thead>
+                            <tbody id="report-tbody">
+                                <tr>
+                                    <td colspan="10" style="text-align:center;padding:60px;color:var(--text-muted)">
+                                        Click a report above to load data</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/sidebar.js"></script>
+    <script src="../assets/js/aira.js"></script>
+    <script>
+        auth.requireAuth();
+        renderSidebar('reports');
+        renderHeader('Reports', 'Generate and export reports');
+
+        let currentReport = null;
+        let currentData = [];
+
+        const reportConfig = {
+            'attendance-defaulters': {
+                title: '📉 Attendance Defaulters',
+                endpoint: '/reports/attendance-defaulters',
+                headers: ['Roll No', 'Name', 'Subject', 'Total Classes', 'Present', 'Percentage'],
+                row: r => `<tr>
+        <td>${r.roll_number}</td><td>${r.student_name}</td><td>${r.subject_name}</td>
+        <td>${r.total_classes}</td><td>${r.present_count}</td>
+        <td><strong style="color:${utils.attendanceColor(r.percentage)}">${r.percentage}%</strong></td>
+      </tr>`
+            },
+            'marks-summary': {
+                title: '📝 Marks Summary',
+                endpoint: '/reports/marks-summary',
+                headers: ['Roll No', 'Name', 'Exam', 'Subject', 'Marks', 'Max Marks', 'Status'],
+                row: r => `<tr>
+        <td>${r.roll_number}</td><td>${r.student_name}</td><td>${r.exam_name}</td>
+        <td>${r.subject_name}</td><td>${r.marks_obtained}</td><td>${r.max_marks}</td>
+        <td>${utils.statusBadge(r.marks_obtained >= r.passing_marks ? 'pass' : 'fail')}</td>
+      </tr>`
+            },
+            'fee-defaulters': {
+                title: '💸 Fee Defaulters',
+                endpoint: '/reports/fee-defaulters',
+                headers: ['Reg No', 'Name', 'Course', 'Total Fee', 'Paid', 'Balance'],
+                row: r => `<tr>
+        <td>${r.reg_number}</td><td>${r.student_name}</td><td>${r.course_name}</td>
+        <td>${utils.formatCurrency(r.total_fee)}</td><td>${utils.formatCurrency(r.total_paid)}</td>
+        <td><strong style="color:var(--danger)">${utils.formatCurrency(r.balance)}</strong></td>
+      </tr>`
+            },
+            'department-summary': {
+                title: '🏛️ Department Summary',
+                endpoint: '/reports/department-summary',
+                headers: ['Department', 'Students', 'Staff', 'Courses'],
+                row: r => `<tr>
+        <td><strong>${r.department_name}</strong></td>
+        <td>${r.total_students}</td><td>${r.total_staff}</td><td>${r.total_courses}</td>
+      </tr>`
+            }
+        };
+
+        async function loadReport(type) {
+            currentReport = type;
+            const config = reportConfig[type];
+            document.getElementById('report-title').textContent = config.title;
+            document.getElementById('export-btn').style.display = '';
+            document.getElementById('report-thead').innerHTML = `<tr>${config.headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            document.getElementById('report-tbody').innerHTML = `<tr><td colspan="${config.headers.length}" style="text-align:center;padding:30px">Loading...</td></tr>`;
+
+            const res = await api.get(config.endpoint);
+            currentData = res?.data?.data || [];
+            utils.renderTable('report-tbody', currentData, config.row);
+        }
+
+        function exportReport() {
+            if (!currentData.length) return;
+            const config = reportConfig[currentReport];
+            const rows = [config.headers.join(',')];
+            currentData.forEach(r => {
+                const el = document.createElement('div');
+                el.innerHTML = config.row(r);
+                const cells = [...el.querySelectorAll('td')].map(td => `"${td.textContent.trim()}"`);
+                rows.push(cells.join(','));
+            });
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${currentReport}-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            utils.toast('Report exported!', 'success');
+        }
+    </script>
+</body>
+
+</html>

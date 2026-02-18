@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff — CMS</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/aira.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🎓</div>
+                <div class="logo-text">CMS <span>College Management</span></div>
+            </div>
+            <nav class="sidebar-nav"></nav>
+        </aside>
+        <div class="main-content">
+            <header class="header" id="page-header"></header>
+            <main class="page-content">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="flex items-center gap-3" style="flex-wrap:wrap">
+                            <div class="search-bar">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="form-control" id="search-input"
+                                    placeholder="Search by name, employee ID...">
+                            </div>
+                            <select class="form-control" id="filter-dept" style="width:200px">
+                                <option value="">All Departments</option>
+                            </select>
+                            <a href="form.html" class="btn btn-primary" style="margin-left:auto">➕ Add Staff</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👨‍🏫 Staff Members</h3>
+                        <span id="staff-count" class="badge badge-primary">—</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Designation</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/utils.js"></script>
+    <script src="../assets/js/sidebar.js"></script>
+    <script src="../assets/js/aira.js"></script>
+    <script>
+        auth.requireAuth();
+        renderSidebar('staff');
+        renderHeader('Staff', 'Manage faculty and staff');
+
+        async function loadStaff(params = {}) {
+            const res = await api.get('/staff/', params);
+            if (res?.ok) {
+                const staff = res.data.data || [];
+                document.getElementById('staff-count').textContent = staff.length;
+                utils.renderTable('staff-tbody', staff, s => `
+        <tr>
+          <td>${s.employee_id}</td>
+          <td><strong>${s.name}</strong><br><small class="text-muted">${s.email || ''}</small></td>
+          <td>${s.designation}</td>
+          <td>${s.department_name || '—'}</td>
+          <td>${utils.statusBadge(s.status)}</td>
+          <td>
+            <a href="form.html?id=${s.staff_id}" class="btn btn-ghost btn-sm">✏️ Edit</a>
+          </td>
+        </tr>`);
+            }
+        }
+
+        async function loadDepts() {
+            const res = await api.get('/college/departments');
+            if (res?.ok) utils.populateSelect('filter-dept', res.data.data || [], 'department_id', 'name', 'All Departments');
+        }
+
+        document.getElementById('filter-dept').onchange = function () {
+            loadStaff(this.value ? { department_id: this.value } : {});
+        };
+        const searchFn = utils.debounce(v => loadStaff(v ? { search: v } : {}), 400);
+        document.getElementById('search-input').oninput = e => searchFn(e.target.value);
+
+        loadDepts(); loadStaff();
+    </script>
+</body>
+
+</html>
