@@ -1,0 +1,100 @@
+API Test Report
+Fetching routes from http://localhost:5000/debug/routes...
+Routes:
+<pre>aira.chat                                          POST,OPTIONS         /api/aira/chat
+aira.get_config                                    HEAD,GET,OPTIONS     /api/aira/config
+aira.get_conversations                             HEAD,GET,OPTIONS     /api/aira/conversations
+aira.get_tools                                     HEAD,GET,OPTIONS     /api/aira/tools
+aira.run_tool                                      POST,OPTIONS         /api/aira/execute-tool
+aira.save_config                                   POST,OPTIONS         /api/aira/config
+attendance.get_attendance                          HEAD,GET,OPTIONS     /api/attendance/
+attendance.get_attendance_summary                  HEAD,GET,OPTIONS     /api/attendance/summary
+attendance.save_attendance                         POST,OPTIONS         /api/attendance/
+auth.change_password                               POST,OPTIONS         /api/auth/change-password
+auth.login                                         POST,OPTIONS         /api/auth/login
+auth.logout                                        POST,OPTIONS         /api/auth/logout
+auth.me                                            HEAD,GET,OPTIONS     /api/auth/me
+college.add_academic_year                          POST,OPTIONS         /api/college/academic-years
+college.add_department                             POST,OPTIONS         /api/college/departments
+college.delete_department                          DELETE,OPTIONS       /api/college/departments/<int:dept_id>
+college.get_academic_years                         HEAD,GET,OPTIONS     /api/college/academic-years
+college.get_college                                HEAD,GET,OPTIONS     /api/college/
+college.get_departments                            HEAD,GET,OPTIONS     /api/college/departments
+college.get_roles                                  HEAD,GET,OPTIONS     /api/college/roles
+college.update_college                             PUT,OPTIONS          /api/college/
+college.update_department                          PUT,OPTIONS          /api/college/departments/<int:dept_id>
+courses.add_course                                 POST,OPTIONS         /api/courses/
+courses.add_semester                               POST,OPTIONS         /api/courses/semesters
+courses.add_subject                                POST,OPTIONS         /api/courses/subjects
+courses.delete_course                              DELETE,OPTIONS       /api/courses/<int:course_id>
+courses.delete_subject                             DELETE,OPTIONS       /api/courses/subjects/<int:subject_id>
+courses.get_courses                                HEAD,GET,OPTIONS     /api/courses/
+courses.get_semesters                              HEAD,GET,OPTIONS     /api/courses/semesters
+courses.get_subjects                               HEAD,GET,OPTIONS     /api/courses/subjects
+courses.update_course                              PUT,OPTIONS          /api/courses/<int:course_id>
+courses.update_subject                             PUT,OPTIONS          /api/courses/subjects/<int:subject_id>
+fees.add_payment                                   POST,OPTIONS         /api/fees/payments
+fees.add_scholarship                               POST,OPTIONS         /api/fees/scholarships
+fees.add_structure                                 POST,OPTIONS         /api/fees/structures
+fees.get_balance                                   HEAD,GET,OPTIONS     /api/fees/balance/<int:student_id>
+fees.get_categories                                HEAD,GET,OPTIONS     /api/fees/categories
+fees.get_components                                HEAD,GET,OPTIONS     /api/fees/components
+fees.get_payments                                  HEAD,GET,OPTIONS     /api/fees/payments
+fees.get_scholarships                              HEAD,GET,OPTIONS     /api/fees/scholarships
+fees.get_structures                                HEAD,GET,OPTIONS     /api/fees/structures
+health                                             HEAD,GET,OPTIONS     /api/health
+list_routes                                        HEAD,GET,OPTIONS     /debug/routes
+marks.add_exam                                     POST,OPTIONS         /api/marks/exams
+marks.get_exam_types                               HEAD,GET,OPTIONS     /api/marks/exam-types
+marks.get_exams                                    HEAD,GET,OPTIONS     /api/marks/exams
+marks.get_grade_mappings                           HEAD,GET,OPTIONS     /api/marks/grade-mappings
+marks.get_marks                                    HEAD,GET,OPTIONS     /api/marks/marks
+marks.get_results                                  HEAD,GET,OPTIONS     /api/marks/results
+marks.save_marks                                   POST,OPTIONS         /api/marks/marks
+notifications.create_template                      POST,OPTIONS         /api/notifications/templates
+notifications.delete_template                      DELETE,OPTIONS       /api/notifications/templates/<int:template_id>
+notifications.get_history                          HEAD,GET,OPTIONS     /api/notifications/history
+notifications.get_templates                        HEAD,GET,OPTIONS     /api/notifications/templates
+notifications.send_notification                    POST,OPTIONS         /api/notifications/send
+notifications.update_template                      PUT,OPTIONS          /api/notifications/templates/<int:template_id>
+reports.attendance_report                          HEAD,GET,OPTIONS     /api/reports/attendance
+reports.department_summary                         HEAD,GET,OPTIONS     /api/reports/department-summary
+reports.fee_defaulters                             HEAD,GET,OPTIONS     /api/reports/fee-defaulters
+reports.marks_report                               HEAD,GET,OPTIONS     /api/reports/marks
+staff.add_allocation                               POST,OPTIONS         /api/staff/allocations
+staff.add_staff                                    POST,OPTIONS         /api/staff
+staff.delete_allocation                            DELETE,OPTIONS       /api/staff/allocations/<int:alloc_id>
+staff.delete_staff                                 DELETE,OPTIONS       /api/staff/<int:staff_id>
+staff.get_allocations                              HEAD,GET,OPTIONS     /api/staff/allocations
+staff.get_staff                                    HEAD,GET,OPTIONS     /api/staff
+staff.get_staff_member                             HEAD,GET,OPTIONS     /api/staff/<int:staff_id>
+staff.update_staff                                 PUT,OPTIONS          /api/staff/<int:staff_id>
+static                                             HEAD,GET,OPTIONS     /static/<path:filename>
+students.add_batch                                 POST,OPTIONS         /api/students/batches
+students.add_section                               POST,OPTIONS         /api/students/sections
+students.add_student                               POST,OPTIONS         /api/students
+students.delete_student                            DELETE,OPTIONS       /api/students/<int:student_id>
+students.get_batches                               HEAD,GET,OPTIONS     /api/students/batches
+students.get_sections                              HEAD,GET,OPTIONS     /api/students/sections
+students.get_student                               HEAD,GET,OPTIONS     /api/students/<int:student_id>
+students.get_students                              HEAD,GET,OPTIONS     /api/students
+students.update_student                            PUT,OPTIONS          /api/students/<int:student_id>
+timetable.add_period                               POST,OPTIONS         /api/timetable/periods
+timetable.add_room                                 POST,OPTIONS         /api/timetable/rooms
+timetable.add_timetable_entry                      POST,OPTIONS         /api/timetable/
+timetable.delete_timetable_entry                   DELETE,OPTIONS       /api/timetable/<int:timetable_id>
+timetable.get_periods                              HEAD,GET,OPTIONS     /api/timetable/periods
+timetable.get_rooms                                HEAD,GET,OPTIONS     /api/timetable/rooms
+timetable.get_timetable                            HEAD,GET,OPTIONS     /api/timetable/</pre>
+Login Successful
+
+Testing http://localhost:5000/api/staff
+Status: 200
+
+Testing http://localhost:5000/api/staff/
+Status: 404
+Response: <!doctype html>
+<html lang=en>
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai

@@ -6,7 +6,7 @@ from app.utils.response import success, error
 courses_bp = Blueprint("courses", __name__)
 
 # --- Courses ---
-@courses_bp.route("/", methods=["GET"])
+@courses_bp.route("", methods=["GET"])
 @login_required
 def get_courses():
     dept_id = request.args.get("department_id")
@@ -16,7 +16,7 @@ def get_courses():
         courses = query("SELECT c.*, d.name as department_name FROM course c JOIN department d ON c.department_id=d.department_id")
     return success(courses)
 
-@courses_bp.route("/", methods=["POST"])
+@courses_bp.route("", methods=["POST"])
 @roles_required("super_admin", "admin")
 def add_course():
     data = request.get_json()

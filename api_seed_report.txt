@@ -1,0 +1,5 @@
+API Seed Report
+Login Successful
+Using Course ID: 1 (OS)
+Batch Created: 1
+Section Created: 1

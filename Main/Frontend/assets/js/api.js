@@ -32,7 +32,7 @@ const api = {
         // Token expired — redirect to login
         localStorage.removeItem('cms_token');
         localStorage.removeItem('cms_user');
-        window.location.href = '/management-system/Main/Frontend/login.html';
+        window.location.href = '/login.html';
         return;
       }
 

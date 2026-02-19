@@ -24,6 +24,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('payments')">💳 Payments</button>
                     <button class="tab-btn" onclick="switchTab('balance')">💰 Student Balance</button>
+                    <button class="tab-btn" onclick="switchTab('structures')">📋 Fee Structures</button>
                     <button class="tab-btn" onclick="switchTab('scholarships')">🎓 Scholarships</button>
                 </div>
 
@@ -71,6 +72,30 @@
                             <h3 class="card-title">💰 Fee Balance</h3>
                         </div>
                         <div class="card-body" id="balance-content"></div>
+                    </div>
+                </div>
+
+                <!-- Fee Structures Tab -->
+                <div id="tab-structures" style="display:none">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Fee Structures</h3>
+                            <button class="btn btn-primary btn-sm" onclick="openAddStructure()">➕ Add Structure</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Sem</th>
+                                        <th>Category</th>
+                                        <th>Academic Year</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="structures-tbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -150,6 +175,46 @@
         </div>
     </div>
 
+    <!-- Add Fee Structure Modal -->
+    <div class="modal-overlay" id="add-structure-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Fee Structure</h3>
+                <button class="modal-close" onclick="utils.closeModal('add-structure-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Course <span class="required">*</span></label>
+                        <select id="fs-course" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Academic Year <span class="required">*</span></label>
+                        <select id="fs-academic-year" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fee Category <span class="required">*</span></label>
+                        <select id="fs-category" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Semester <span class="required">*</span></label>
+                        <input type="number" id="fs-semester" class="form-control" value="1" min="1" max="10">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total Amount <span class="required">*</span></label>
+                    <input type="number" id="fs-amount" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="utils.closeModal('add-structure-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStructure()">Save Structure</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../assets/js/theme.js"></script>
     <script src="../assets/js/api.js"></script>
     <script src="../assets/js/auth.js"></script>
@@ -162,13 +227,14 @@
         renderHeader('Fees', 'Manage fee payments and scholarships');
 
         function switchTab(tab) {
-            ['payments', 'balance', 'scholarships'].forEach(t => {
+            ['payments', 'balance', 'structures', 'scholarships'].forEach(t => {
                 document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
             });
             document.querySelectorAll('.tab-btn').forEach((b, i) => {
-                b.classList.toggle('active', ['payments', 'balance', 'scholarships'][i] === tab);
+                b.classList.toggle('active', ['payments', 'balance', 'structures', 'scholarships'][i] === tab);
             });
             if (tab === 'scholarships') loadScholarships();
+            if (tab === 'structures') loadStructures();
         }
 
         async function init() {
@@ -187,10 +253,11 @@
             if (fsRes?.ok) utils.populateSelect('payment-fee-structure', fsRes.data.data || [], 'fee_structure_id', f => `${f.course_name} Sem ${f.semester_number}`, 'Select Fee Structure');
         }
 
+        // --- Balance ---
         async function searchBalance() {
             const query = document.getElementById('balance-search').value.trim();
             if (!query) return;
-            const res = await api.get('/students/', { search: query });
+            const res = await api.get('/students', { search: query });
             const students = res?.data?.data || [];
             if (!students.length) { utils.toast('No student found', 'warning'); return; }
             const student = students[0];
@@ -207,6 +274,55 @@
             }
         }
 
+        // --- Structures ---
+        async function loadStructures() {
+            const res = await api.get('/fees/structures');
+            if (res?.ok) {
+                utils.renderTable('structures-tbody', res.data.data || [], s => `
+        <tr>
+            <td>${s.course_name}</td>
+            <td>Semester ${s.semester_number}</td>
+            <td>${s.category_name}</td>
+            <td>${s.year_label}</td>
+            <td><strong>${utils.formatCurrency(s.total_amount)}</strong></td>
+        </tr>`);
+            }
+        }
+
+        async function openAddStructure() {
+            const [cRes, ayRes, fcRes] = await Promise.all([
+                api.get('/courses'),
+                api.get('/college/academic-years'),
+                api.get('/fees/categories')
+            ]);
+
+            if (cRes?.ok) utils.populateSelect('fs-course', cRes.data.data || [], 'course_id', 'name', 'Select Course');
+            if (ayRes?.ok) utils.populateSelect('fs-academic-year', ayRes.data.data || [], 'academic_year_id', 'year_label', 'Select AY');
+            if (fcRes?.ok) utils.populateSelect('fs-category', fcRes.data.data || [], 'fee_category_id', 'name', 'Select Category');
+
+            utils.openModal('add-structure-modal');
+        }
+
+        async function saveStructure() {
+            const data = {
+                course_id: document.getElementById('fs-course').value,
+                academic_year_id: document.getElementById('fs-academic-year').value,
+                fee_category_id: document.getElementById('fs-category').value,
+                semester_number: document.getElementById('fs-semester').value,
+                total_amount: document.getElementById('fs-amount').value
+            };
+
+            const res = await api.post('/fees/structures', data);
+            if (res?.ok) {
+                utils.toast('Fee structure added!', 'success');
+                utils.closeModal('add-structure-modal');
+                loadStructures();
+            } else {
+                utils.toast(res?.data?.message || 'Failed', 'error');
+            }
+        }
+
+        // --- Scholarships ---
         async function loadScholarships() {
             const res = await api.get('/fees/scholarships');
             if (res?.ok) {
@@ -229,11 +345,12 @@
             if (res?.ok) { utils.toast('Updated!', 'success'); loadScholarships(); }
         }
 
+        // --- Payments ---
         async function savePayment() {
             const studentId = document.getElementById('payment-student-id').value;
             const feeStructureId = document.getElementById('payment-fee-structure').value;
             const form = utils.getFormData('payment-form');
-            const res = await api.post('/fees/payments', { ...form, student_id: studentId, fee_structure_id: feeStructureId });
+            const res = await api.post('/fees/payments', { ...form, student_id: studentId, fee_structure_id: feeStructureId, academic_year_id: 1 }); // Hardcoded AY for now or fetch it
             if (res?.ok) { utils.toast('Payment recorded!', 'success'); utils.closeModal('add-payment-modal'); init(); }
             else utils.toast(res?.data?.message || 'Failed', 'error');
         }

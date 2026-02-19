@@ -173,7 +173,7 @@
         }
 
         async function init() {
-            const [cRes, dRes] = await Promise.all([api.get('/courses/'), api.get('/college/departments')]);
+            const [cRes, dRes] = await Promise.all([api.get('/courses'), api.get('/college/departments')]);
             if (cRes?.ok) {
                 const courses = cRes.data.data || [];
                 utils.renderTable('courses-tbody', courses, c => `
@@ -195,7 +195,7 @@
         }
 
         async function saveCourse() {
-            const res = await api.post('/courses/', {
+            const res = await api.post('/courses', {
                 name: document.getElementById('c-name').value,
                 code: document.getElementById('c-code').value,
                 department_id: document.getElementById('c-dept').value,

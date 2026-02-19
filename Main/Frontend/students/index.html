@@ -77,7 +77,7 @@
         let allStudents = [];
 
         async function loadStudents(params = {}) {
-            const res = await api.get('/students/', params);
+            const res = await api.get('/students', params);
             if (res?.ok) {
                 allStudents = res.data.data || [];
                 document.getElementById('student-count').textContent = allStudents.length;

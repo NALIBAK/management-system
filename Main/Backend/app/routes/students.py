@@ -44,7 +44,7 @@ def add_section():
     return success({"section_id": sid}, "Section created", 201)
 
 # --- Students ---
-@students_bp.route("/", methods=["GET"])
+@students_bp.route("", methods=["GET"])
 @login_required
 def get_students():
     section_id = request.args.get("section_id")
@@ -76,7 +76,7 @@ def get_student(student_id):
         return error("Student not found", 404)
     return success(student)
 
-@students_bp.route("/", methods=["POST"])
+@students_bp.route("", methods=["POST"])
 @roles_required("super_admin", "admin")
 def add_student():
     data = request.get_json()

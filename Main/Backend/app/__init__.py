@@ -5,8 +5,9 @@ from config import Config
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.url_map.strict_slashes = False  # Prevent trailing-slash redirects (breaks CORS preflight)
 
-    CORS(app, origins=Config.CORS_ORIGINS, supports_credentials=True)
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     # Register all blueprints
     from app.routes.auth import auth_bp

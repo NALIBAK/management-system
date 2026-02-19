@@ -38,7 +38,7 @@
                 </div>
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">👨‍🏫 Staff Members</h3>
+                        <h3 class="card-title">👨‍🏫 Staff Members (v2)</h3>
                         <span id="staff-count" class="badge badge-primary">—</span>
                     </div>
                     <div class="table-wrapper">
@@ -72,7 +72,7 @@
         renderHeader('Staff', 'Manage faculty and staff');
 
         async function loadStaff(params = {}) {
-            const res = await api.get('/staff/', params);
+            const res = await api.get('/staff', params);
             if (res?.ok) {
                 const staff = res.data.data || [];
                 document.getElementById('staff-count').textContent = staff.length;

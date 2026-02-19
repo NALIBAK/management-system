@@ -20,4 +20,4 @@ class Config:
     JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", 24))
 
     # CORS
-    CORS_ORIGINS = ["*"]
+    CORS_ORIGINS = ["http://localhost:8000", "http://127.0.0.1:8000"]

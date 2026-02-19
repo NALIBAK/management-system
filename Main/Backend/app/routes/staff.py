@@ -5,7 +5,7 @@ from app.utils.response import success, error
 
 staff_bp = Blueprint("staff", __name__)
 
-@staff_bp.route("/", methods=["GET"])
+@staff_bp.route("", methods=["GET"])
 @login_required
 def get_staff():
     dept_id = request.args.get("department_id")
@@ -30,7 +30,7 @@ def get_staff_member(staff_id):
         return error("Staff not found", 404)
     return success(member)
 
-@staff_bp.route("/", methods=["POST"])
+@staff_bp.route("", methods=["POST"])
 @roles_required("super_admin", "admin")
 def add_staff():
     data = request.get_json()
