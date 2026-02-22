@@ -138,6 +138,61 @@ def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def _get_db_context() -> str:
+    """Query the database for a real-time snapshot to inject into the AIRA system prompt."""
+    try:
+        students = query("SELECT COUNT(*) as c FROM student WHERE status='active'", fetchone=True)
+        staff    = query("SELECT COUNT(*) as c FROM staff WHERE status='active'", fetchone=True)
+        courses  = query("SELECT COUNT(*) as c FROM course", fetchone=True)
+        depts    = query("SELECT COUNT(*) as c FROM department", fetchone=True)
+        subjects = query("SELECT COUNT(*) as c FROM subject", fetchone=True)
+
+        dept_list  = query("SELECT name, code FROM department ORDER BY name")
+        course_list = query("SELECT name, code, degree_type FROM course ORDER BY name")
+        staff_list  = query("SELECT name, designation, d.name as dept FROM staff s LEFT JOIN department d ON s.department_id=d.department_id WHERE s.status='active' ORDER BY s.name")
+        student_list = query("SELECT name, reg_number, roll_number FROM student WHERE status='active' ORDER BY name")
+        subject_list = query("SELECT s.name, s.code, s.semester_number, c.name as course FROM subject s JOIN course c ON s.course_id=c.course_id ORDER BY c.name, s.semester_number")
+
+        fee_total = query("SELECT COALESCE(SUM(amount_paid),0) as total FROM fee_payment", fetchone=True)
+        att_avg   = query("""SELECT ROUND(AVG(pct),2) as avg FROM (
+            SELECT ROUND(SUM(CASE WHEN status='P' THEN 1 ELSE 0 END)*100.0/COUNT(*),2) as pct
+            FROM attendance GROUP BY student_id, subject_id HAVING COUNT(*)>0) x""", fetchone=True)
+
+        ctx = f"""
+=== LIVE DATABASE SNAPSHOT (use ONLY these facts to answer questions) ===
+
+COUNTS:
+- Active Students: {students['c']}
+- Active Staff: {staff['c']}
+- Courses: {courses['c']}
+- Departments: {depts['c']}
+- Subjects: {subjects['c']}
+- Total Fees Collected: ₹{float(fee_total['total']):,.2f}
+- Overall Avg Attendance: {att_avg['avg'] if att_avg['avg'] else 'N/A'}%
+
+DEPARTMENTS ({depts['c']}):
+""" + "\n".join(f"  • {d['name']} [{d['code']}]" for d in dept_list) + """
+
+COURSES:
+""" + "\n".join(f"  • {c['name']} ({c['code']}) — {c['degree_type']}" for c in course_list) + """
+
+STAFF:
+""" + "\n".join(f"  • {s['name']} — {s['designation']} ({s['dept'] or 'N/A'})" for s in staff_list) + """
+
+STUDENTS:
+""" + "\n".join(f"  • {s['name']} (Reg: {s['reg_number']}, Roll: {s['roll_number']})" for s in student_list) + """
+
+SUBJECTS:
+""" + "\n".join(f"  • {s['name']} [{s['code']}] — Sem {s['semester_number']}, Course: {s['course']}" for s in subject_list) + """
+
+=== END OF DATABASE SNAPSHOT ===
+IMPORTANT: Answer ONLY from the data above. Do NOT invent, guess, or use prior knowledge about students, staff, or college data. If something is not in the snapshot, say "No data available for that yet."
+"""
+        return ctx
+    except Exception as e:
+        return f"\n[DB context unavailable: {str(e)}]\n"
+
+
 @aira_bp.route("/chat", methods=["POST"])
 @login_required
 def chat():
@@ -165,32 +220,52 @@ def chat():
     # Get LLM config
     llm_config = query("SELECT * FROM llm_config LIMIT 1", fetchone=True)
 
-    # Build system prompt
-    system_prompt = f"""You are AIRA, an AI assistant for a College Management System.
+    # Fetch live database snapshot — this ensures the LLM answers from real data
+    db_context = _get_db_context()
+
+    # Build system prompt with injected DB facts
+    system_prompt = f"""You are AIRA, an AI Research Assistant for a College Management System.
 Current user role: {user['role']}. Page context: {page_context}.
-You have access to tools to query and manage college data.
-For read operations, execute immediately. For write/update/delete, always confirm with the user first.
-Respond concisely and helpfully."""
+
+{db_context}
+
+INSTRUCTIONS:
+- Always answer questions about students, staff, departments, courses, subjects, attendance, and fees using ONLY the database snapshot above.
+- For write/update/delete operations, always confirm with the user first.
+- Respond concisely, helpfully, and in markdown where useful.
+- If unsure or data is absent from the snapshot, say so honestly."""
 
     # Get conversation history
     history = query("SELECT role, content FROM aira_message WHERE conversation_id=%s ORDER BY created_at",
                     (conversation_id,))
-
     messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
-    # Call LLM (Ollama fallback or Gemini), with smart built-in fallback
+    # For simple keyword queries, use smart fallback (instant, no LLM latency)
+    msg_lower = message.lower().strip()
+    simple_keywords = [
+        "how many student", "how many staff", "how many department", "how many course",
+        "how many subject", "list student", "list staff", "list department", "list course",
+        "show student", "show staff", "show department", "show course",
+        "total student", "total staff", "total fee", "fee collected",
+        "overall attendance", "department summary", "dept summary",
+        "what can you do", "help", "commands"
+    ]
+    is_simple = any(k in msg_lower for k in simple_keywords)
+
     ai_response = ""
     tool_calls_made = []
 
     try:
-        if llm_config and llm_config.get("api_key_encrypted"):
-            # Gemini API
+        if is_simple:
+            # Fast path: use smart fallback which queries DB directly
+            ai_response = _smart_fallback(message, user)
+        elif llm_config and llm_config.get("api_key_encrypted"):
+            # Gemini API (with DB context injected in system prompt)
             ai_response = _call_gemini(llm_config, system_prompt, messages, MCP_TOOLS)
         else:
-            # Try Ollama first
+            # Ollama (with DB context injected in system prompt)
             ollama_resp = _call_ollama(system_prompt, messages)
-            if "Ollama is not available" in ollama_resp or "Error" in ollama_resp:
-                # Use smart built-in fallback
+            if "Ollama is not available" in ollama_resp or "Error:" in ollama_resp:
                 ai_response = _smart_fallback(message, user)
             else:
                 ai_response = ollama_resp
@@ -206,6 +281,8 @@ Respond concisely and helpfully."""
         "response": ai_response,
         "tool_calls": tool_calls_made
     })
+
+
 
 
 def _smart_fallback(message: str, user: dict) -> str:
