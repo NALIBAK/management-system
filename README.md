@@ -28,36 +28,35 @@ A full-stack college management application built with **Flask** (backend) and *
 
 ### 1. Database Setup
 
-1. Start **XAMPP** and ensure MySQL is running on port `3306`.
-2. Open **phpMyAdmin** (`http://localhost/phpmyadmin`) or MySQL CLI.
-3. Run the schema:
-   ```sql
-   source C:/xampp/htdocs/management-system/Main/Backend/database/schema.sql
+1. Start your local MySQL server (e.g., via **XAMPP**) and ensure it is running on port `3306`.
+2. Import the database schema and seed data. From the root of the project, run:
+   ```powershell
+   mysql -u root < Main/Backend/database/schema.sql
+   mysql -u root < Main/Backend/database/seed.sql
    ```
-4. Run the seed data:
-   ```sql
-   source C:/xampp/htdocs/management-system/Main/Backend/database/seed.sql
-   ```
+   *(If your MySQL root user has a password, add `-p` to the commands).*
 
 ---
 
 ### 2. Backend Setup
 
 ```powershell
-# Navigate to backend
-cd C:\xampp\htdocs\management-system\Main\Backend
+# Navigate to backend directory from the project root
+cd Main/Backend
 
 # Create virtual environment using uv
 uv venv
 
-# Activate virtual environment
+# Activate virtual environment (Windows)
 .venv\Scripts\activate
+# (On macOS/Linux use: source .venv/bin/activate)
 
 # Install dependencies using uv
 uv pip install -r requirements.txt
 
 # Copy and configure environment
 copy .env.example .env
+# (On macOS/Linux use: cp .env.example .env)
 ```
 
 Edit `.env` with your settings:
@@ -88,15 +87,24 @@ The API will be available at `http://localhost:5000/api`
 
 ### 3. Frontend Access
 
-Since the frontend uses plain HTML/JS, serve it via XAMPP Apache:
+The frontend uses plain HTML/JS and can be served via any local web server.
 
-1. Ensure XAMPP Apache is running.
-2. Open your browser and navigate to:
-   ```
-   http://localhost/management-system/Main/Frontend/login.html
-   ```
+**Option A: Using Python HTTP Server (Recommended for AI Agents / Any PC)**
+```powershell
+# From the project root, navigate to Frontend
+cd Main/Frontend
+# Start a simple HTTP server on port 8000
+python -m http.server 8000
+```
+Navigate to: `http://localhost:8000/login.html`
+*(Note: Ensure `CORS_ORIGINS` in your backend `.env` includes `http://localhost:8000`)*
 
-**Default Login:**
+**Option B: Using XAMPP Apache**
+Place the project within the `htdocs` folder. Ensure Apache is running in XAMPP.
+Navigate to: `http://localhost/management-system/Main/Frontend/login.html` *(adjust the URL path based on your folder name)*.
+
+**Default Login Credentials:**
+Use these credentials to log in to the system.
 | Username | Password | Role |
 |----------|----------|------|
 | `superadmin` | `Admin@123` | Super Admin |
