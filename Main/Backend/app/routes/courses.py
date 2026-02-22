@@ -60,10 +60,16 @@ def get_subjects():
 @roles_required("super_admin", "admin", "hod")
 def add_subject():
     data = request.get_json()
+    
+    # Gracefully accept both 'semester' and 'semester_number'
+    semester_num = data.get("semester_number", data.get("semester"))
+    if not semester_num:
+        return error("Semester is required", 400)
+        
     sid = execute(
         "INSERT INTO subject (course_id, semester_number, name, code, credits, type, department_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (data["course_id"], data["semester_number"], data["name"], data["code"],
-         data["credits"], data["type"], data["department_id"])
+        (data["course_id"], semester_num, data["name"], data["code"],
+         data.get("credits", 3), data.get("type", "theory"), data.get("department_id"))
     )
     return success({"subject_id": sid}, "Subject created", 201)
 

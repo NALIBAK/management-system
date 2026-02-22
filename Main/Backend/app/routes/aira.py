@@ -178,7 +178,7 @@ Respond concisely and helpfully."""
 
     messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
-    # Call LLM (Ollama fallback or Gemini)
+    # Call LLM (Ollama fallback or Gemini), with smart built-in fallback
     ai_response = ""
     tool_calls_made = []
 
@@ -187,10 +187,15 @@ Respond concisely and helpfully."""
             # Gemini API
             ai_response = _call_gemini(llm_config, system_prompt, messages, MCP_TOOLS)
         else:
-            # Ollama fallback
-            ai_response = _call_ollama(system_prompt, messages)
+            # Try Ollama first
+            ollama_resp = _call_ollama(system_prompt, messages)
+            if "Ollama is not available" in ollama_resp or "Error" in ollama_resp:
+                # Use smart built-in fallback
+                ai_response = _smart_fallback(message, user)
+            else:
+                ai_response = ollama_resp
     except Exception as e:
-        ai_response = f"I encountered an error connecting to the AI model: {str(e)}. Please check your LLM configuration in Settings."
+        ai_response = _smart_fallback(message, user)
 
     # Save assistant response
     execute("INSERT INTO aira_message (conversation_id, role, content) VALUES (%s,'assistant',%s)",
@@ -202,14 +207,127 @@ Respond concisely and helpfully."""
         "tool_calls": tool_calls_made
     })
 
+
+def _smart_fallback(message: str, user: dict) -> str:
+    """Rule-based smart fallback that queries the DB to answer common questions."""
+    msg = message.lower().strip()
+    
+    try:
+        # Student queries
+        if any(k in msg for k in ["how many student", "student count", "total student", "number of student"]):
+            result = query("SELECT COUNT(*) as count FROM student WHERE status='active'", fetchone=True)
+            count = result["count"] if result else 0
+            return f"📊 There are currently **{count} active students** enrolled in the college."
+
+        if any(k in msg for k in ["list student", "all student", "show student"]):
+            students = query("SELECT name, reg_number, status FROM student ORDER BY name LIMIT 10")
+            if not students:
+                return "No students found in the database yet."
+            lines = [f"• {s['name']} ({s['reg_number']}) — {s['status']}" for s in students]
+            return f"📋 **Students** (showing up to 10):\n" + "\n".join(lines)
+
+        # Department queries
+        if any(k in msg for k in ["how many department", "department count", "total department"]):
+            result = query("SELECT COUNT(*) as count FROM department", fetchone=True)
+            return f"🏫 There are **{result['count']} departments** in the college."
+
+        if any(k in msg for k in ["list department", "all department", "show department"]):
+            depts = query("SELECT name, code FROM department ORDER BY name")
+            if not depts:
+                return "No departments found."
+            lines = [f"• {d['name']} ({d['code']})" for d in depts]
+            return "🏫 **Departments:**\n" + "\n".join(lines)
+
+        # Staff queries
+        if any(k in msg for k in ["how many staff", "staff count", "total staff", "how many teacher", "how many faculty"]):
+            result = query("SELECT COUNT(*) as count FROM staff WHERE status='active'", fetchone=True)
+            return f"👨‍🏫 There are **{result['count']} active staff members** in the college."
+
+        if any(k in msg for k in ["list staff", "all staff", "show staff"]):
+            staff = query("SELECT name, designation FROM staff WHERE status='active' ORDER BY name LIMIT 10")
+            if not staff:
+                return "No staff found."
+            lines = [f"• {s['name']} — {s['designation']}" for s in staff]
+            return "👨‍🏫 **Staff Members:**\n" + "\n".join(lines)
+
+        # Course queries
+        if any(k in msg for k in ["how many course", "course count", "total course"]):
+            result = query("SELECT COUNT(*) as count FROM course", fetchone=True)
+            return f"📚 There are **{result['count']} courses** offered by the college."
+
+        if any(k in msg for k in ["list course", "all course", "show course"]):
+            courses = query("SELECT name, code, degree_type FROM course ORDER BY name")
+            if not courses:
+                return "No courses found."
+            lines = [f"• {c['name']} ({c['code']}) — {c['degree_type']}" for c in courses]
+            return "📚 **Courses:**\n" + "\n".join(lines)
+
+        # Subject queries
+        if any(k in msg for k in ["how many subject", "subject count", "total subject"]):
+            result = query("SELECT COUNT(*) as count FROM subject", fetchone=True)
+            return f"📖 There are **{result['count']} subjects** in the curriculum."
+
+        # Attendance queries
+        if "attendance" in msg and any(k in msg for k in ["average", "overall", "summary", "how is"]):
+            result = query("""SELECT ROUND(AVG(pct), 2) as avg_attendance FROM (
+                SELECT ROUND(SUM(CASE WHEN status='P' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as pct
+                FROM attendance GROUP BY student_id, subject_id
+            ) as sub""", fetchone=True)
+            avg = result["avg_attendance"] if result and result["avg_attendance"] else "N/A"
+            return f"📅 The **overall average attendance** across all students is **{avg}%**."
+
+        # Fee queries
+        if any(k in msg for k in ["total fee", "fee collected", "fee payment"]):
+            result = query("SELECT COALESCE(SUM(amount_paid), 0) as total FROM fee_payment", fetchone=True)
+            total = float(result["total"]) if result else 0
+            return f"💰 Total fees collected so far: **₹{total:,.2f}**"
+
+        # Department summary
+        if "department summary" in msg or "dept summary" in msg:
+            result = execute_tool("get_department_summary", {}, user)
+            if result.get("success") and result.get("data"):
+                lines = [f"• **{d['name']}**: {d['students']} students, {d['staff']} staff" for d in result["data"]]
+                return "🏫 **Department Summary:**\n" + "\n".join(lines)
+
+        # Help
+        if any(k in msg for k in ["help", "what can you do", "what can you", "capabilities", "commands"]):
+            return """👋 Hi! I'm **AIRA**, your AI assistant for the College Management System. Here's what I can help you with:
+
+📊 **Student Info**: "How many students are there?", "List all students"
+🏫 **Departments**: "How many departments?", "List departments"  
+👨‍🏫 **Staff**: "How many staff members?", "List staff"
+📚 **Courses**: "How many courses?", "List courses"
+📖 **Subjects**: "How many subjects?"
+📅 **Attendance**: "What is the overall attendance?"
+💰 **Fees**: "Total fees collected?"
+📊 **Reports**: "Department summary"
+
+> 💡 **Tip**: For more advanced queries, configure a Gemini API key in Settings → LLM Config."""
+
+        # Default
+        return f"""🤖 I understood your question: *"{message}"*
+
+I'm currently running in **built-in mode** (no external LLM configured). I can answer common data queries about students, staff, courses, departments, attendance, and fees.
+
+Try asking:
+- "How many students are there?"
+- "List all departments"
+- "How many staff members?"
+- "What is the overall attendance?"
+
+For full AI capabilities, configure a **Gemini API key** in Settings → LLM Config."""
+
+    except Exception as e:
+        return f"⚠️ Sorry, I encountered an error while processing your query: {str(e)}"
+
 def _call_ollama(system_prompt: str, messages: list) -> str:
     try:
         payload = {
-            "model": "llama3.2",
+            "model": "gemma3",
             "messages": [{"role": "system", "content": system_prompt}] + messages,
             "stream": False
         }
-        resp = http_requests.post("http://localhost:11434/api/chat", json=payload, timeout=60)
+        resp = http_requests.post("http://localhost:11434/api/chat", json=payload, timeout=120)
         resp.raise_for_status()
         return resp.json()["message"]["content"]
     except Exception as e:

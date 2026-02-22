@@ -64,13 +64,16 @@ INSERT IGNORE INTO period_definition (college_id, period_number, start_time, end
 (1, 7, '13:50:00', '14:40:00', 'Period 7');
 
 -- Default Super Admin (password: Admin@123)
--- bcrypt hash of 'Admin@123'
+-- IMPORTANT: This hash was generated with Python's bcrypt library (bcrypt.hashpw)
+-- DO NOT replace with a PHP-generated hash — they are incompatible with PyBcrypt
 INSERT IGNORE INTO user_account (username, password_hash, role_id, ref_type, is_active) VALUES
 ('superadmin',
- '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBpj2BjEHkNWuS',
+ '$2b$12$PSJNxtS1oLzv9NCrlRRrSeZZXfTQex2cJCMdXgdLx2rx/LklkKrYJS',
  (SELECT role_id FROM role WHERE role_name='super_admin'),
  'admin', 1);
 
--- LLM Config (default to Ollama)
-INSERT IGNORE INTO llm_config (college_id, provider, selected_model, fallback_provider, fallback_model) VALUES
-(1, 'ollama', 'llama3.2', 'ollama', 'llama3.2');
+-- LLM Config (defaults to Ollama with gemma3 — change in Settings → LLM Config)
+-- Run: ollama pull gemma3
+-- Alternatively pull any model and update selected_model here or via the UI
+INSERT IGNORE INTO llm_config (college_id, provider, selected_model, fallback_provider, fallback_model, temperature, max_tokens) VALUES
+(1, 'ollama', 'gemma3', 'ollama', 'gemma3', 0.7, 2048);
