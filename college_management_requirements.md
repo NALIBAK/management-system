@@ -106,10 +106,18 @@
 
 ### Module 10: Report Generation
 - Student mark sheets (semester-wise, with GPA/CGPA)
-- Attendance reports (student-wise, subject-wise, section-wise)
+- **Student Profile / CGPA Report** (name, reg no, 8-semester CGPA, course, department)
+- Attendance reports (student-wise, subject-wise, section-wise, with flexible date range filters)
 - Fee collection reports (paid, pending, defaulters list)
+- **Fee Structure Report** (breakdown by course, category, semester)
 - Department-wise summary reports
-- Export options (PDF, Excel)
+- **Eligibility Criteria Report** (match/unmatch per student against configurable criteria)
+- **Category-wise Student Report** (centac / management / regular admission breakdown)
+- **Caste/Community-wise Scholarship Report**
+- **Extracurricular Activity Report** (technical & non-technical activities, achievements)
+- **Detailed Attendance Report** (filter by class, student, department, subject, date range)
+- **Detailed Marks Report** (filter by class, student, department, subject, exam type)
+- Export options (CSV)
 
 ### Module 11: AIRA — AI Assistant
 
@@ -348,6 +356,8 @@ erDiagram
         int section_id FK
         int course_id FK
         string admission_type
+        enum student_category
+        string caste_community
         date admission_date
         string status
     }
@@ -679,11 +689,55 @@ erDiagram
 
 ---
 
+### ER 9: Eligibility, Extracurricular Activities & Student Reports
+
+```mermaid
+erDiagram
+    STUDENT ||--o{ EXTRACURRICULAR_ACTIVITY : participates
+    ACADEMIC_YEAR ||--o{ EXTRACURRICULAR_ACTIVITY : "held in"
+    STUDENT ||--o{ STUDENT_ELIGIBILITY : evaluated
+    ELIGIBILITY_CRITERIA ||--o{ STUDENT_ELIGIBILITY : defines
+
+    EXTRACURRICULAR_ACTIVITY {
+        int activity_id PK
+        int student_id FK
+        string title
+        enum activity_type
+        string category
+        date event_date
+        text description
+        string achievement
+        int academic_year_id FK
+        timestamp created_at
+    }
+    ELIGIBILITY_CRITERIA {
+        int criteria_id PK
+        string name
+        enum criteria_type
+        float threshold_value
+        enum comparison
+        text description
+        boolean is_active
+        timestamp created_at
+    }
+    STUDENT_ELIGIBILITY {
+        int mapping_id PK
+        int student_id FK
+        int criteria_id FK
+        enum status
+        float evaluated_value
+        timestamp evaluated_at
+        string remarks
+    }
+```
+
+---
+
 ---
 
 ## 🗂️ Entity Details
 
-### All Entities (35 total)
+### All Entities (38 total)
 
 | # | Entity | Purpose | Key Attributes |
 |---|--------|---------|----------------|
@@ -722,6 +776,9 @@ erDiagram
 | 33 | **LLM Config** | AI model configuration | provider, api_key, model, fallback |
 | 34 | **Notification Template** | Saved message formats | content_template, channel_type |
 | 35 | **Notification Log** | History of sent messages | student, sender, content, status |
+| 36 | **Extracurricular Activity** | Student activities (technical & non-technical) | title, activity_type, category, achievement |
+| 37 | **Eligibility Criteria** | Configurable eligibility rules | name, criteria_type, threshold_value, comparison |
+| 38 | **Student Eligibility** | Student ↔ Criteria evaluation mapping | status (match/unmatch), evaluated_value |
 
 ---
 
@@ -739,6 +796,9 @@ erDiagram
 - **User Account** → has **AIRA Conversations**, **AIRA Action Logs**, **Activity Logs**
 - **Staff** → creates **Notification Templates**, sends **Notification Logs** to **Student**
 - **College** → has one **LLM Config** (cloud API key + fallback local model)
+- **Student** → has **Extracurricular Activities** (technical & non-technical per academic year)
+- **Student** → evaluated against **Eligibility Criteria** via **Student Eligibility** mapping
+- **Student** → has `student_category` (centac/management/regular) and `caste_community` for report breakdowns
 
 ---
 

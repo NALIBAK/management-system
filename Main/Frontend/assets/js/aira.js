@@ -31,6 +31,10 @@ const aira = {
           <button class="aira-quick-btn" data-prompt="Show students with attendance below 75%">📊 Low Attendance</button>
           <button class="aira-quick-btn" data-prompt="Show fee defaulters">💰 Fee Defaulters</button>
           <button class="aira-quick-btn" data-prompt="Show department summary">🏫 Dept Summary</button>
+          <button class="aira-quick-btn" data-prompt="Show student CGPA report">📊 CGPA Report</button>
+          <button class="aira-quick-btn" data-prompt="Show eligibility report">🎯 Eligibility</button>
+          <button class="aira-quick-btn" data-prompt="Show category wise report">🏷️ Categories</button>
+          <button class="aira-quick-btn" data-prompt="Show scholarship report">🎓 Scholarships</button>
         </div>
         <div class="aira-messages" id="aira-messages"></div>
         <div class="aira-input-area">

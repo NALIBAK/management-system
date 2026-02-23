@@ -1,31 +1,35 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>College Management System - ER Diagrams</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
-        body { 
-            background: #1a1a2e; 
-            color: #e0e0e0; 
-            font-family: 'Segoe UI', sans-serif; 
-            padding: 40px; 
+        body {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 40px;
             margin: 0;
         }
-        h1 { 
-            text-align: center; 
-            color: #00d4ff; 
+
+        h1 {
+            text-align: center;
+            color: #00d4ff;
             font-size: 28px;
             margin-bottom: 40px;
         }
+
         .diagram-section {
             background: #16213e;
             border-radius: 16px;
             padding: 30px;
             margin-bottom: 40px;
             border: 1px solid #0f3460;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .diagram-section h2 {
             color: #e94560;
             font-size: 20px;
@@ -34,6 +38,7 @@
             padding-bottom: 10px;
             border-bottom: 2px solid #0f3460;
         }
+
         .mermaid {
             display: flex;
             justify-content: center;
@@ -41,427 +46,473 @@
         }
     </style>
 </head>
+
 <body>
     <h1>🎓 College Management System — ER Diagrams</h1>
 
     <div class="diagram-section" id="er1">
         <h2>ER 1: Core — College, Department, Course, Batch, Section</h2>
         <div class="mermaid">
-erDiagram
-    COLLEGE ||--o{ DEPARTMENT : has
-    COLLEGE ||--o{ BATCH : has
-    COLLEGE ||--o{ ACADEMIC_YEAR : has
-    DEPARTMENT ||--o{ COURSE : offers
-    DEPARTMENT ||--|| STAFF : "headed by HOD"
-    COURSE ||--o{ SECTION : "divided into"
-    BATCH ||--o{ SECTION : has
+            erDiagram
+            COLLEGE ||--o{ DEPARTMENT : has
+            COLLEGE ||--o{ BATCH : has
+            COLLEGE ||--o{ ACADEMIC_YEAR : has
+            DEPARTMENT ||--o{ COURSE : offers
+            DEPARTMENT ||--|| STAFF : "headed by HOD"
+            COURSE ||--o{ SECTION : "divided into"
+            BATCH ||--o{ SECTION : has
 
-    COLLEGE {
-        int college_id PK
-        string name
-        string code
-        string address
-        string phone
-        string email
-        string logo_url
-    }
-    ACADEMIC_YEAR {
-        int academic_year_id PK
-        int college_id FK
-        string year_label
-        date start_date
-        date end_date
-        boolean is_current
-    }
-    DEPARTMENT {
-        int department_id PK
-        int college_id FK
-        string name
-        string code
-        int hod_staff_id FK
-    }
-    COURSE {
-        int course_id PK
-        int department_id FK
-        string name
-        string code
-        int total_semesters
-        string degree_type
-    }
-    BATCH {
-        int batch_id PK
-        int college_id FK
-        int admission_year
-        string label
-    }
-    SECTION {
-        int section_id PK
-        int batch_id FK
-        int course_id FK
-        string name
-        int current_semester
-    }
-    STAFF {
-        int staff_id PK
-        string name
-        string designation
-        int department_id FK
-    }
+            COLLEGE {
+            int college_id PK
+            string name
+            string code
+            string address
+            string phone
+            string email
+            string logo_url
+            }
+            ACADEMIC_YEAR {
+            int academic_year_id PK
+            int college_id FK
+            string year_label
+            date start_date
+            date end_date
+            boolean is_current
+            }
+            DEPARTMENT {
+            int department_id PK
+            int college_id FK
+            string name
+            string code
+            int hod_staff_id FK
+            }
+            COURSE {
+            int course_id PK
+            int department_id FK
+            string name
+            string code
+            int total_semesters
+            string degree_type
+            }
+            BATCH {
+            int batch_id PK
+            int college_id FK
+            int admission_year
+            string label
+            }
+            SECTION {
+            int section_id PK
+            int batch_id FK
+            int course_id FK
+            string name
+            int current_semester
+            }
+            STAFF {
+            int staff_id PK
+            string name
+            string designation
+            int department_id FK
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er2">
         <h2>ER 2: Users & Authentication</h2>
         <div class="mermaid">
-erDiagram
-    ROLE ||--o{ USER_ACCOUNT : assigned
-    USER_ACCOUNT ||--o{ ACTIVITY_LOG : generates
+            erDiagram
+            ROLE ||--o{ USER_ACCOUNT : assigned
+            USER_ACCOUNT ||--o{ ACTIVITY_LOG : generates
 
-    USER_ACCOUNT {
-        int user_id PK
-        string username
-        string password_hash
-        int role_id FK
-        int ref_id
-        string ref_type
-        boolean is_active
-        datetime last_login
-    }
-    ROLE {
-        int role_id PK
-        string role_name
-        string description
-    }
-    ACTIVITY_LOG {
-        int log_id PK
-        int user_id FK
-        string action
-        string entity_type
-        int entity_id
-        text details
-        datetime timestamp
-    }
+            USER_ACCOUNT {
+            int user_id PK
+            string username
+            string password_hash
+            int role_id FK
+            int ref_id
+            string ref_type
+            boolean is_active
+            datetime last_login
+            }
+            ROLE {
+            int role_id PK
+            string role_name
+            string description
+            }
+            ACTIVITY_LOG {
+            int log_id PK
+            int user_id FK
+            string action
+            string entity_type
+            int entity_id
+            text details
+            datetime timestamp
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er3">
         <h2>ER 3: Student & Staff</h2>
         <div class="mermaid">
-erDiagram
-    BATCH ||--o{ STUDENT : "belongs to"
-    SECTION ||--o{ STUDENT : contains
-    COURSE ||--o{ STUDENT : "enrolled in"
-    DEPARTMENT ||--o{ STAFF : employs
+            erDiagram
+            BATCH ||--o{ STUDENT : "belongs to"
+            SECTION ||--o{ STUDENT : contains
+            COURSE ||--o{ STUDENT : "enrolled in"
+            DEPARTMENT ||--o{ STAFF : employs
 
-    STUDENT {
-        int student_id PK
-        string reg_number
-        string roll_number
-        string name
-        string email
-        string phone
-        string gender
-        date dob
-        string address
-        string blood_group
-        string guardian_name
-        string guardian_phone
-        int batch_id FK
-        int section_id FK
-        int course_id FK
-        string admission_type
-        date admission_date
-        string status
-    }
-    STAFF {
-        int staff_id PK
-        string employee_id
-        string name
-        string email
-        string phone
-        string gender
-        string designation
-        string qualification
-        int department_id FK
-        date joining_date
-        string status
-    }
+            STUDENT {
+            int student_id PK
+            string reg_number
+            string roll_number
+            string name
+            string email
+            string phone
+            string gender
+            date dob
+            string address
+            string blood_group
+            string guardian_name
+            string guardian_phone
+            int batch_id FK
+            int section_id FK
+            int course_id FK
+            string admission_type
+            enum student_category
+            string caste_community
+            date admission_date
+            string status
+            }
+            STAFF {
+            int staff_id PK
+            string employee_id
+            string name
+            string email
+            string phone
+            string gender
+            string designation
+            string qualification
+            int department_id FK
+            date joining_date
+            string status
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er4">
         <h2>ER 4: Subjects, Allocation & Timetable</h2>
         <div class="mermaid">
-erDiagram
-    COURSE ||--o{ SUBJECT : includes
-    DEPARTMENT ||--o{ SUBJECT : owns
-    STAFF ||--o{ SUBJECT_ALLOCATION : teaches
-    SUBJECT ||--o{ SUBJECT_ALLOCATION : allocated
-    SECTION ||--o{ SUBJECT_ALLOCATION : assigned
-    ACADEMIC_YEAR ||--o{ SUBJECT_ALLOCATION : "valid for"
-    SECTION ||--o{ TIMETABLE : scheduled
-    SUBJECT ||--o{ TIMETABLE : scheduled
-    STAFF ||--o{ TIMETABLE : "assigned to"
-    ROOM ||--o{ TIMETABLE : "used in"
-    PERIOD_DEFINITION ||--o{ TIMETABLE : "at time"
-    COLLEGE ||--o{ ROOM : has
-    COLLEGE ||--o{ PERIOD_DEFINITION : defines
+            erDiagram
+            COURSE ||--o{ SUBJECT : includes
+            DEPARTMENT ||--o{ SUBJECT : owns
+            STAFF ||--o{ SUBJECT_ALLOCATION : teaches
+            SUBJECT ||--o{ SUBJECT_ALLOCATION : allocated
+            SECTION ||--o{ SUBJECT_ALLOCATION : assigned
+            ACADEMIC_YEAR ||--o{ SUBJECT_ALLOCATION : "valid for"
+            SECTION ||--o{ TIMETABLE : scheduled
+            SUBJECT ||--o{ TIMETABLE : scheduled
+            STAFF ||--o{ TIMETABLE : "assigned to"
+            ROOM ||--o{ TIMETABLE : "used in"
+            PERIOD_DEFINITION ||--o{ TIMETABLE : "at time"
+            COLLEGE ||--o{ ROOM : has
+            COLLEGE ||--o{ PERIOD_DEFINITION : defines
 
-    SUBJECT {
-        int subject_id PK
-        int course_id FK
-        int semester_number
-        string name
-        string code
-        int credits
-        string type
-        int department_id FK
-    }
-    SUBJECT_ALLOCATION {
-        int allocation_id PK
-        int staff_id FK
-        int subject_id FK
-        int section_id FK
-        int academic_year_id FK
-    }
-    ROOM {
-        int room_id PK
-        int college_id FK
-        string name
-        string type
-        int capacity
-        string building
-        int floor_number
-    }
-    PERIOD_DEFINITION {
-        int period_id PK
-        int college_id FK
-        int period_number
-        time start_time
-        time end_time
-        string label
-    }
-    TIMETABLE {
-        int timetable_id PK
-        int section_id FK
-        int subject_id FK
-        int staff_id FK
-        int room_id FK
-        int period_id FK
-        int academic_year_id FK
-        string day_of_week
-    }
+            SUBJECT {
+            int subject_id PK
+            int course_id FK
+            int semester_number
+            string name
+            string code
+            int credits
+            string type
+            int department_id FK
+            }
+            SUBJECT_ALLOCATION {
+            int allocation_id PK
+            int staff_id FK
+            int subject_id FK
+            int section_id FK
+            int academic_year_id FK
+            }
+            ROOM {
+            int room_id PK
+            int college_id FK
+            string name
+            string type
+            int capacity
+            string building
+            int floor_number
+            }
+            PERIOD_DEFINITION {
+            int period_id PK
+            int college_id FK
+            int period_number
+            time start_time
+            time end_time
+            string label
+            }
+            TIMETABLE {
+            int timetable_id PK
+            int section_id FK
+            int subject_id FK
+            int staff_id FK
+            int room_id FK
+            int period_id FK
+            int academic_year_id FK
+            string day_of_week
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er5">
         <h2>ER 5: Exams, Marks & Results</h2>
         <div class="mermaid">
-erDiagram
-    EXAM_TYPE ||--o{ EXAM : categorizes
-    SUBJECT ||--o{ EXAM : examined
-    SECTION ||--o{ EXAM : "conducted for"
-    ACADEMIC_YEAR ||--o{ EXAM : "held in"
-    SEMESTER ||--o{ EXAM : "belongs to"
-    EXAM ||--o{ MARK : records
-    STUDENT ||--o{ MARK : scores
-    STUDENT ||--o{ SEMESTER_RESULT : achieves
-    SEMESTER ||--o{ SEMESTER_RESULT : "results for"
-    COLLEGE ||--o{ GRADE_MAPPING : defines
-    ACADEMIC_YEAR ||--o{ SEMESTER : "divided into"
+            erDiagram
+            EXAM_TYPE ||--o{ EXAM : categorizes
+            SUBJECT ||--o{ EXAM : examined
+            SECTION ||--o{ EXAM : "conducted for"
+            ACADEMIC_YEAR ||--o{ EXAM : "held in"
+            SEMESTER ||--o{ EXAM : "belongs to"
+            EXAM ||--o{ MARK : records
+            STUDENT ||--o{ MARK : scores
+            STUDENT ||--o{ SEMESTER_RESULT : achieves
+            SEMESTER ||--o{ SEMESTER_RESULT : "results for"
+            COLLEGE ||--o{ GRADE_MAPPING : defines
+            ACADEMIC_YEAR ||--o{ SEMESTER : "divided into"
 
-    EXAM_TYPE {
-        int exam_type_id PK
-        string name
-        string description
-    }
-    EXAM {
-        int exam_id PK
-        int exam_type_id FK
-        int subject_id FK
-        int section_id FK
-        int academic_year_id FK
-        int semester_id FK
-        string exam_name
-        date exam_date
-        float max_marks
-        float passing_marks
-        float weightage_percent
-    }
-    MARK {
-        int mark_id PK
-        int exam_id FK
-        int student_id FK
-        float marks_obtained
-        boolean is_absent
-        string remarks
-    }
-    SEMESTER {
-        int semester_id PK
-        int academic_year_id FK
-        int semester_number
-        date start_date
-        date end_date
-        boolean is_current
-    }
-    GRADE_MAPPING {
-        int grade_id PK
-        int college_id FK
-        float min_percentage
-        float max_percentage
-        string grade_letter
-        float grade_point
-    }
-    SEMESTER_RESULT {
-        int result_id PK
-        int student_id FK
-        int semester_id FK
-        int academic_year_id FK
-        float total_credits
-        float credits_earned
-        float gpa
-        float cgpa
-        boolean is_manual_override
-        string result_status
-    }
+            EXAM_TYPE {
+            int exam_type_id PK
+            string name
+            string description
+            }
+            EXAM {
+            int exam_id PK
+            int exam_type_id FK
+            int subject_id FK
+            int section_id FK
+            int academic_year_id FK
+            int semester_id FK
+            string exam_name
+            date exam_date
+            float max_marks
+            float passing_marks
+            float weightage_percent
+            }
+            MARK {
+            int mark_id PK
+            int exam_id FK
+            int student_id FK
+            float marks_obtained
+            boolean is_absent
+            string remarks
+            }
+            SEMESTER {
+            int semester_id PK
+            int academic_year_id FK
+            int semester_number
+            date start_date
+            date end_date
+            boolean is_current
+            }
+            GRADE_MAPPING {
+            int grade_id PK
+            int college_id FK
+            float min_percentage
+            float max_percentage
+            string grade_letter
+            float grade_point
+            }
+            SEMESTER_RESULT {
+            int result_id PK
+            int student_id FK
+            int semester_id FK
+            int academic_year_id FK
+            float total_credits
+            float credits_earned
+            float gpa
+            float cgpa
+            boolean is_manual_override
+            string result_status
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er6">
         <h2>ER 6: Attendance</h2>
         <div class="mermaid">
-erDiagram
-    STUDENT ||--o{ ATTENDANCE : marked
-    SUBJECT ||--o{ ATTENDANCE : attended
-    SECTION ||--o{ ATTENDANCE : "tracked for"
-    PERIOD_DEFINITION ||--o{ ATTENDANCE : "for period"
-    ACADEMIC_YEAR ||--o{ ATTENDANCE : "recorded in"
+            erDiagram
+            STUDENT ||--o{ ATTENDANCE : marked
+            SUBJECT ||--o{ ATTENDANCE : attended
+            SECTION ||--o{ ATTENDANCE : "tracked for"
+            PERIOD_DEFINITION ||--o{ ATTENDANCE : "for period"
+            ACADEMIC_YEAR ||--o{ ATTENDANCE : "recorded in"
 
-    ATTENDANCE {
-        int attendance_id PK
-        int student_id FK
-        int subject_id FK
-        int section_id FK
-        int period_id FK
-        int academic_year_id FK
-        date attendance_date
-        string status
-        string remarks
-    }
+            ATTENDANCE {
+            int attendance_id PK
+            int student_id FK
+            int subject_id FK
+            int section_id FK
+            int period_id FK
+            int academic_year_id FK
+            date attendance_date
+            string status
+            string remarks
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er7">
         <h2>ER 7: Fees & Scholarships</h2>
         <div class="mermaid">
-erDiagram
-    COURSE ||--o{ FEE_STRUCTURE : "priced for"
-    FEE_CATEGORY ||--o{ FEE_STRUCTURE : "categorized by"
-    ACADEMIC_YEAR ||--o{ FEE_STRUCTURE : "applicable in"
-    FEE_STRUCTURE ||--o{ FEE_STRUCTURE_DETAIL : "broken into"
-    FEE_COMPONENT ||--o{ FEE_STRUCTURE_DETAIL : "composed of"
-    FEE_STRUCTURE ||--o{ FEE_PAYMENT : "paid against"
-    STUDENT ||--o{ FEE_PAYMENT : pays
-    STUDENT ||--o{ SCHOLARSHIP : receives
-    ACADEMIC_YEAR ||--o{ SCHOLARSHIP : "awarded in"
+            erDiagram
+            COURSE ||--o{ FEE_STRUCTURE : "priced for"
+            FEE_CATEGORY ||--o{ FEE_STRUCTURE : "categorized by"
+            ACADEMIC_YEAR ||--o{ FEE_STRUCTURE : "applicable in"
+            FEE_STRUCTURE ||--o{ FEE_STRUCTURE_DETAIL : "broken into"
+            FEE_COMPONENT ||--o{ FEE_STRUCTURE_DETAIL : "composed of"
+            FEE_STRUCTURE ||--o{ FEE_PAYMENT : "paid against"
+            STUDENT ||--o{ FEE_PAYMENT : pays
+            STUDENT ||--o{ SCHOLARSHIP : receives
+            ACADEMIC_YEAR ||--o{ SCHOLARSHIP : "awarded in"
 
-    FEE_CATEGORY {
-        int fee_category_id PK
-        string name
-        string description
-    }
-    FEE_COMPONENT {
-        int component_id PK
-        string name
-        string description
-    }
-    FEE_STRUCTURE {
-        int fee_structure_id PK
-        int course_id FK
-        int fee_category_id FK
-        int semester_number
-        int academic_year_id FK
-        float total_amount
-    }
-    FEE_STRUCTURE_DETAIL {
-        int detail_id PK
-        int fee_structure_id FK
-        int component_id FK
-        float amount
-    }
-    FEE_PAYMENT {
-        int payment_id PK
-        int student_id FK
-        int fee_structure_id FK
-        int academic_year_id FK
-        float amount_paid
-        date payment_date
-        string payment_mode
-        string receipt_number
-        string transaction_ref
-        string remarks
-    }
-    SCHOLARSHIP {
-        int scholarship_id PK
-        int student_id FK
-        int academic_year_id FK
-        string scholarship_name
-        float amount
-        string status
-    }
+            FEE_CATEGORY {
+            int fee_category_id PK
+            string name
+            string description
+            }
+            FEE_COMPONENT {
+            int component_id PK
+            string name
+            string description
+            }
+            FEE_STRUCTURE {
+            int fee_structure_id PK
+            int course_id FK
+            int fee_category_id FK
+            int semester_number
+            int academic_year_id FK
+            float total_amount
+            }
+            FEE_STRUCTURE_DETAIL {
+            int detail_id PK
+            int fee_structure_id FK
+            int component_id FK
+            float amount
+            }
+            FEE_PAYMENT {
+            int payment_id PK
+            int student_id FK
+            int fee_structure_id FK
+            int academic_year_id FK
+            float amount_paid
+            date payment_date
+            string payment_mode
+            string receipt_number
+            string transaction_ref
+            string remarks
+            }
+            SCHOLARSHIP {
+            int scholarship_id PK
+            int student_id FK
+            int academic_year_id FK
+            string scholarship_name
+            float amount
+            string status
+            }
         </div>
     </div>
 
     <div class="diagram-section" id="er8">
         <h2>ER 8: AIRA — AI Assistant</h2>
         <div class="mermaid">
-erDiagram
-    USER_ACCOUNT ||--o{ AIRA_CONVERSATION : "chats with"
-    AIRA_CONVERSATION ||--o{ AIRA_MESSAGE : contains
-    USER_ACCOUNT ||--o{ AIRA_ACTION_LOG : "actions by"
-    COLLEGE ||--o| LLM_CONFIG : "configured for"
+            erDiagram
+            USER_ACCOUNT ||--o{ AIRA_CONVERSATION : "chats with"
+            AIRA_CONVERSATION ||--o{ AIRA_MESSAGE : contains
+            USER_ACCOUNT ||--o{ AIRA_ACTION_LOG : "actions by"
+            COLLEGE ||--o| LLM_CONFIG : "configured for"
 
-    AIRA_CONVERSATION {
-        int conversation_id PK
-        int user_id FK
-        string title
-        string page_context
-        datetime created_at
-        datetime updated_at
-        datetime expires_at
-    }
-    AIRA_MESSAGE {
-        int message_id PK
-        int conversation_id FK
-        string role
-        text content
-        text tool_calls
-        text tool_results
-        datetime created_at
-    }
-    AIRA_ACTION_LOG {
-        int action_id PK
-        int user_id FK
-        int conversation_id FK
-        string action_type
-        string entity_type
-        int entity_id
-        text action_details
-        string status
-        datetime executed_at
-    }
-    LLM_CONFIG {
-        int config_id PK
-        int college_id FK
-        string provider
-        string api_key_encrypted
-        string selected_model
-        string fallback_provider
-        string fallback_model
-        float temperature
-        int max_tokens
-        datetime updated_at
-    }
+            AIRA_CONVERSATION {
+            int conversation_id PK
+            int user_id FK
+            string title
+            string page_context
+            datetime created_at
+            datetime updated_at
+            datetime expires_at
+            }
+            AIRA_MESSAGE {
+            int message_id PK
+            int conversation_id FK
+            string role
+            text content
+            text tool_calls
+            text tool_results
+            datetime created_at
+            }
+            AIRA_ACTION_LOG {
+            int action_id PK
+            int user_id FK
+            int conversation_id FK
+            string action_type
+            string entity_type
+            int entity_id
+            text action_details
+            string status
+            datetime executed_at
+            }
+            LLM_CONFIG {
+            int config_id PK
+            int college_id FK
+            string provider
+            string api_key_encrypted
+            string selected_model
+            string fallback_provider
+            string fallback_model
+            float temperature
+            int max_tokens
+            datetime updated_at
+            }
+        </div>
+    </div>
+
+    <div class="diagram-section" id="er9">
+        <h2>ER 9: Eligibility, Extracurricular Activities & Student Reports</h2>
+        <div class="mermaid">
+            erDiagram
+            STUDENT ||--o{ EXTRACURRICULAR_ACTIVITY : participates
+            ACADEMIC_YEAR ||--o{ EXTRACURRICULAR_ACTIVITY : "held in"
+            STUDENT ||--o{ STUDENT_ELIGIBILITY : evaluated
+            ELIGIBILITY_CRITERIA ||--o{ STUDENT_ELIGIBILITY : defines
+
+            EXTRACURRICULAR_ACTIVITY {
+            int activity_id PK
+            int student_id FK
+            string title
+            enum activity_type
+            string category
+            date event_date
+            text description
+            string achievement
+            int academic_year_id FK
+            timestamp created_at
+            }
+            ELIGIBILITY_CRITERIA {
+            int criteria_id PK
+            string name
+            enum criteria_type
+            float threshold_value
+            enum comparison
+            text description
+            boolean is_active
+            timestamp created_at
+            }
+            STUDENT_ELIGIBILITY {
+            int mapping_id PK
+            int student_id FK
+            int criteria_id FK
+            enum status
+            float evaluated_value
+            timestamp evaluated_at
+            string remarks
+            }
         </div>
     </div>
 
@@ -480,4 +531,5 @@ erDiagram
         });
     </script>
 </body>
+
 </html>

@@ -1,6 +1,6 @@
 # 🎓 College Management System
 
-A full-stack college management application built with **Flask** (backend) and **plain HTML/CSS/JS** (frontend), featuring a dual dark/light theme, JWT authentication, and an AI assistant (AIRA).
+A full-stack college management application built with **Flask** (backend) and **plain HTML/CSS/JS** (frontend), featuring a dual dark/light theme, JWT authentication, comprehensive report generation, and an AI assistant (AIRA).
 
 ---
 
@@ -41,6 +41,14 @@ A full-stack college management application built with **Flask** (backend) and *
 > ```powershell
 > & "C:\xampp\mysql\bin\mysql.exe" -u root -e "CREATE DATABASE college_management CHARACTER SET utf8mb4;"
 > ```
+
+#### Applying the Report Migration (if upgrading)
+
+If you already have the base schema and need to add the report-generation tables:
+
+```powershell
+Get-Content "Main/Backend/database/migration_reports.sql" | & "C:\xampp\mysql\bin\mysql.exe" -u root
+```
 
 ---
 
@@ -124,15 +132,26 @@ uv run python populate_db.py
 
 ## 🤖 AIRA — AI Research Assistant
 
-AIRA is a built-in AI assistant that answers natural-language questions about students, staff, attendance, marks, and fees using live database data.
+AIRA is a built-in AI assistant that answers natural-language questions about students, staff, attendance, marks, fees, and generates comprehensive reports using live database data.
 
 ### Built-in Mode (No LLM Required)
-AIRA works immediately **without any LLM** for common queries:
-- *"How many students are there?"*
-- *"List all departments"*
-- *"What is the overall attendance?"*
-- *"Total fees collected?"*
-- Type **"help"** to see all supported built-in commands.
+AIRA works immediately **without any LLM** for common queries and reports:
+
+| Category | Example Queries |
+|----------|----------------|
+| **Student Data** | "How many students?", "List students", "Student profile report" |
+| **CGPA / Profile** | "Show student CGPA report", "Profile report" |
+| **Departments** | "Department summary", "How many departments?" |
+| **Staff** | "How many staff?", "List staff" |
+| **Attendance** | "Overall attendance", "Attendance report" |
+| **Marks** | "Marks report", "Show marks" |
+| **Fees** | "Total fees collected?", "Fee structure report" |
+| **Eligibility** | "Eligibility report", "Eligible students" |
+| **Categories** | "Category wise report", "Centac students" |
+| **Scholarships** | "Scholarship report", "Caste wise scholarships" |
+| **Activities** | "Extracurricular activities", "Technical activities" |
+
+Type **"help"** to see all supported built-in commands.
 
 ### Full AI Mode — Ollama (Free & Local, Recommended)
 
@@ -159,59 +178,104 @@ management-system/
 ├── Main/
 │   ├── Backend/
 │   │   ├── app/
-│   │   │   ├── __init__.py          # Flask app factory (CORS, blueprints)
-│   │   │   ├── db.py                # PyMySQL connection pool
+│   │   │   ├── __init__.py              # Flask app factory — CORS, blueprint registration, strict_slashes=False
+│   │   │   ├── db.py                    # PyMySQL connection pool — query() and execute() helpers
 │   │   │   ├── utils/
-│   │   │   │   ├── auth.py          # bcrypt password hashing, JWT helpers
-│   │   │   │   └── response.py      # Standard JSON responses (with timedelta/Decimal serializer)
-│   │   │   └── routes/              # 12 module blueprints
-│   │   │       ├── auth.py
-│   │   │       ├── college.py
-│   │   │       ├── courses.py       # Courses + Subjects (POST accepts 'semester' or 'semester_number')
-│   │   │       ├── students.py
-│   │   │       ├── staff.py
-│   │   │       ├── timetable.py
-│   │   │       ├── marks.py
-│   │   │       ├── attendance.py
-│   │   │       ├── fees.py
-│   │   │       ├── reports.py
-│   │   │       ├── aira.py          # AIRA: smart fallback + Ollama/Gemini bridge
-│   │   │       └── notifications.py
+│   │   │   │   ├── auth.py              # bcrypt password hashing, JWT token creation/verification, login_required decorator
+│   │   │   │   └── response.py          # Standard JSON responses — success/error helpers, timedelta/Decimal serializer
+│   │   │   └── routes/                  # 12 module blueprints (one file per module)
+│   │   │       ├── auth.py              # POST /login, /change-password — JWT authentication flow
+│   │   │       ├── college.py           # College info CRUD, departments list, academic years
+│   │   │       ├── courses.py           # Courses CRUD, subjects CRUD (accepts both 'semester' and 'semester_number')
+│   │   │       ├── students.py          # Student CRUD — includes student_category, caste_community fields
+│   │   │       ├── staff.py             # Staff CRUD, subject allocations
+│   │   │       ├── timetable.py         # Timetable CRUD, period definitions, rooms
+│   │   │       ├── marks.py             # Exams CRUD, bulk mark entry, semester results with GPA/CGPA
+│   │   │       ├── attendance.py        # Bulk attendance entry, attendance summary
+│   │   │       ├── fees.py              # Fee structures, payments, scholarships
+│   │   │       ├── reports.py           # 12 report endpoints — see Reports section below
+│   │   │       ├── aira.py              # AIRA: 14 MCP tools, smart fallback, Ollama/Gemini bridge, DB context injection
+│   │   │       └── notifications.py     # Parent notification templates, send via email/SMS/WhatsApp
 │   │   ├── database/
-│   │   │   ├── schema.sql           # 35-table schema
-│   │   │   └── seed.sql             # Initial roles, college, superadmin (bcrypt hash)
-│   │   ├── config.py
-│   │   ├── run.py
-│   │   ├── requirements.txt
-│   │   └── .env.example
+│   │   │   ├── schema.sql               # 38-table schema — full database definition
+│   │   │   ├── seed.sql                 # Initial roles, college, academic year, superadmin (bcrypt hash)
+│   │   │   └── migration_reports.sql    # Migration: student_category/caste_community columns + 3 new tables
+│   │   ├── config.py                    # Environment variable loading (.env)
+│   │   ├── run.py                       # Flask development server entry point (port 5000)
+│   │   ├── requirements.txt             # Python dependencies: Flask, PyMySQL, PyJWT, bcrypt, requests, google-genai
+│   │   └── .env.example                 # Template for environment configuration
 │   └── Frontend/
 │       ├── assets/
 │       │   ├── css/
-│       │   │   ├── main.css         # Design system (dual theme)
-│       │   │   └── aira.css         # AIRA widget styles
+│       │   │   ├── main.css             # Complete design system — dual theme (light/dark), stat-cards, tables, forms, badges
+│       │   │   └── aira.css             # AIRA widget styles — floating bubble, chat window, quick actions, animations
 │       │   └── js/
-│       │       ├── api.js           # Fetch API client (with JWT token handling)
-│       │       ├── auth.js          # JWT auth management
-│       │       ├── theme.js         # Dark/light toggle
-│       │       ├── utils.js         # Shared utilities
-│       │       ├── sidebar.js       # Shared sidebar renderer
-│       │       └── aira.js          # AIRA chat widget
-│       ├── login.html
-│       ├── dashboard.html
+│       │       ├── api.js               # Fetch API client — auto-injects JWT token, handles 401 redirects
+│       │       ├── auth.js              # JWT auth management — requireAuth(), getUser(), logout()
+│       │       ├── theme.js             # Dark/light theme toggle — saves preference to localStorage
+│       │       ├── utils.js             # Shared utilities — toast(), formatDate(), formatCurrency(), renderTable(), statusBadge(), attendanceColor()
+│       │       ├── sidebar.js           # Shared sidebar renderer — nav links with active state, role-based filtering
+│       │       └── aira.js              # AIRA chat widget — 7 quick actions, markdown rendering, chat history
+│       ├── login.html                   # Login page — username/password form, JWT token storage
+│       ├── dashboard.html               # Dashboard — stat cards, department overview, quick actions
 │       ├── students/
+│       │   ├── index.html               # Student list — search, filter, add/edit modal
+│       │   └── add.html                 # Add/edit student form — includes student_category, caste_community
 │       ├── staff/
+│       │   ├── index.html               # Staff list — filterable, add/edit modal
+│       │   └── add.html                 # Add/edit staff form
 │       ├── departments/
+│       │   └── index.html               # Department management — add, edit, assign HOD
 │       ├── courses/
+│       │   └── index.html               # Courses & subjects — CRUD with semester assignment
 │       ├── timetable/
+│       │   └── index.html               # Visual weekly timetable grid — drag-and-drop scheduling
 │       ├── attendance/
+│       │   └── index.html               # Bulk attendance entry — section-based, date picker
 │       ├── marks/
+│       │   └── index.html               # Bulk mark entry — exam management, semester results
 │       ├── fees/
+│       │   └── index.html               # Fee structures, payments, scholarships management
 │       ├── reports/
+│       │   └── index.html               # 12 report cards with dynamic filters, CSV export
 │       ├── notifications/
+│       │   └── index.html               # Parent notification templates, send history
 │       └── settings/
-├── populate_db.py                   # Script to seed realistic sample data via API
-└── README.md
+│           └── index.html               # LLM config (Ollama/Gemini), system settings
+├── er_diagrams.html                     # Interactive ER diagrams (9 sections) rendered with Mermaid.js
+├── college_management_requirements.md   # Full requirements document — 38 entities, 12 modules, ER diagrams
+├── populate_db.py                       # Script to seed realistic sample data via API calls
+├── test_aira.py                         # AIRA chatbot automated tests
+└── README.md                           # This file
 ```
+
+---
+
+## 📊 Reports Module
+
+The Reports module provides **12 report types** accessible through both the **Reports page UI** and the **AIRA chatbot**:
+
+### Original Reports
+| # | Report | Endpoint | Description |
+|---|--------|----------|-------------|
+| 1 | Attendance Defaulters | `GET /api/reports/attendance` | Students below attendance threshold |
+| 2 | Marks Summary | `GET /api/reports/marks` | GPA/CGPA semester results |
+| 3 | Fee Defaulters | `GET /api/reports/fee-defaulters` | Students with pending fee balance |
+| 4 | Department Summary | `GET /api/reports/department-summary` | Department-wise student/staff/course counts |
+
+### New Reports (Added)
+| # | Report | Endpoint | Description |
+|---|--------|----------|-------------|
+| 5 | Student Profile / CGPA | `GET /api/reports/student-profile` | Name, reg no, CGPA, course, category |
+| 6 | Fee Structure | `GET /api/reports/fee-structure` | Breakdown by course, category, semester |
+| 7 | Eligibility Criteria | `GET /api/reports/eligibility` | Match/unmatch per student against criteria |
+| 8 | Category-wise | `GET /api/reports/category-wise` | Centac/management/regular breakdown |
+| 9 | Scholarship | `GET /api/reports/scholarship` | Caste/community-wise scholarship data |
+| 10 | Extracurricular | `GET /api/reports/extracurricular` | Technical & non-technical activities |
+| 11 | Attendance Detailed | `GET /api/reports/attendance-detailed` | Flexible filters: class, student, dept, subject, date range |
+| 12 | Marks Detailed | `GET /api/reports/marks-detailed` | Flexible filters: class, student, dept, subject, exam type |
+
+All reports support **query parameter filters** and can be **exported to CSV** from the UI.
 
 ---
 
@@ -233,15 +297,60 @@ management-system/
 | 1 | Auth | Login, JWT, password change |
 | 2 | College | College info, departments, academic years |
 | 3 | Courses | Courses, subjects, semesters |
-| 4 | Students | Batches, sections, student CRUD |
+| 4 | Students | Batches, sections, student CRUD (with category & caste/community) |
 | 5 | Staff | Staff CRUD, subject allocations |
 | 6 | Timetable | Visual weekly timetable grid |
-| 7 | Marks | Exams, bulk mark entry, results, GPA |
+| 7 | Marks | Exams, bulk mark entry, results, GPA/CGPA |
 | 8 | Attendance | Bulk attendance, summary, % tracking |
 | 9 | Fees | Fee structures, payments, scholarships |
-| 10 | Reports | Attendance/marks/fee reports + CSV export |
-| 11 | AIRA | AI assistant (built-in + Ollama/Gemini) |
+| 10 | Reports | 12 report types + CSV export (see Reports section) |
+| 11 | AIRA | AI assistant — 14 MCP tools, smart fallback, Ollama/Gemini |
 | 12 | Notifications | Parent notifications via email/SMS/WhatsApp |
+
+---
+
+## 🗄️ Database Schema (38 Tables)
+
+| # | Table | Purpose |
+|---|-------|---------|
+| 1 | `college` | College info (multi-campus ready) |
+| 2 | `academic_year` | Year labels, start/end dates |
+| 3 | `department` | Departments with HOD assignment |
+| 4 | `course` | Courses with degree type |
+| 5 | `semester` | Semester periods per academic year |
+| 6 | `subject` | Subjects with credits and type |
+| 7 | `batch` | Admission year grouping |
+| 8 | `section` | Class divisions (A, B, C) |
+| 9 | `staff` | Faculty master data |
+| 10 | `student` | Student master + `student_category`, `caste_community` |
+| 11 | `role` | Access roles (super_admin, admin, hod, staff) |
+| 12 | `user_account` | Login credentials |
+| 13 | `activity_log` | Audit trail |
+| 14 | `subject_allocation` | Staff ↔ Subject ↔ Section mapping |
+| 15 | `room` | Classrooms & labs |
+| 16 | `period_definition` | Time slots |
+| 17 | `timetable` | Schedule entries |
+| 18 | `exam_type` | Internal/External/Assignment/Lab |
+| 19 | `exam` | Specific exam instances |
+| 20 | `mark` | Student scores |
+| 21 | `grade_mapping` | % → Grade → Grade Point |
+| 22 | `semester_result` | GPA/CGPA per student |
+| 23 | `attendance` | Period-wise attendance records |
+| 24 | `fee_category` | Mgmt quota, govt, SC/ST, etc. |
+| 25 | `fee_component` | Tuition, lab, library, etc. |
+| 26 | `fee_structure` | Course + Category → Total |
+| 27 | `fee_structure_detail` | Component-level breakdown |
+| 28 | `fee_payment` | Transaction records |
+| 29 | `scholarship` | Concession tracking |
+| 30 | `aira_conversation` | Chat sessions per user |
+| 31 | `aira_message` | Chat messages with tool calls/results |
+| 32 | `aira_action_log` | AI-initiated action audit trail |
+| 33 | `llm_config` | AI model configuration per college |
+| 34 | `notification_template` | Saved message formats |
+| 35 | `notification_log` | Sent notification history |
+| 36 | `extracurricular_activity` | Student activities (technical & non-technical) |
+| 37 | `eligibility_criteria` | Configurable eligibility rules with thresholds |
+| 38 | `student_eligibility` | Student ↔ Criteria evaluation mapping |
 
 ---
 
@@ -257,6 +366,7 @@ The following bugs were identified and resolved during initial setup:
 | AIRA using wrong Ollama model | Backend was hard-coded to `llama3.2` which may not be installed | Updated default to `gemma3:1b`; configurable via Settings → LLM Config |
 | `add_subject` API 500 error | Frontend sent field as `semester`, backend expected `semester_number` | Route now accepts both field names |
 | Blueprint trailing-slash issues | Flask strict_slashes default caused redirect on trailing-slash mismatch | Set `app.url_map.strict_slashes = False` in app factory |
+| AIRA "show student" keyword collision | "Show student CGPA report" matched generic "show student" before CGPA report handler | Added `is_report_query` guard to check report-specific keywords first |
 
 ---
 

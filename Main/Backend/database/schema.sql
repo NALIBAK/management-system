@@ -132,6 +132,8 @@ CREATE TABLE IF NOT EXISTS student (
     section_id INT NOT NULL,
     course_id INT NOT NULL,
     admission_type VARCHAR(50) DEFAULT 'regular',
+    student_category ENUM('centac','management','regular') DEFAULT 'regular',
+    caste_community VARCHAR(50) DEFAULT NULL,
     admission_date DATE,
     status ENUM('active','inactive','graduated','dropped') DEFAULT 'active',
     FOREIGN KEY (batch_id) REFERENCES batch(batch_id),
@@ -456,4 +458,46 @@ CREATE TABLE IF NOT EXISTS notification_log (
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES student(student_id),
     FOREIGN KEY (sender_staff_id) REFERENCES staff(staff_id)
+);
+
+-- 36. Extracurricular Activity
+CREATE TABLE IF NOT EXISTS extracurricular_activity (
+    activity_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    activity_type ENUM('technical','non_technical') NOT NULL,
+    category VARCHAR(100),
+    event_date DATE,
+    description TEXT,
+    achievement VARCHAR(255),
+    academic_year_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES student(student_id),
+    FOREIGN KEY (academic_year_id) REFERENCES academic_year(academic_year_id)
+);
+
+-- 37. Eligibility Criteria
+CREATE TABLE IF NOT EXISTS eligibility_criteria (
+    criteria_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    criteria_type ENUM('cgpa','attendance','fee','backlog','other') NOT NULL,
+    threshold_value FLOAT,
+    comparison ENUM('>=','<=','>','<','=') DEFAULT '>=',
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 38. Student Eligibility Mapping
+CREATE TABLE IF NOT EXISTS student_eligibility (
+    mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    criteria_id INT NOT NULL,
+    status ENUM('match','unmatch') NOT NULL,
+    evaluated_value FLOAT,
+    evaluated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    remarks VARCHAR(255),
+    UNIQUE KEY unique_elig (student_id, criteria_id),
+    FOREIGN KEY (student_id) REFERENCES student(student_id),
+    FOREIGN KEY (criteria_id) REFERENCES eligibility_criteria(criteria_id)
 );

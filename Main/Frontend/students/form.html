@@ -88,6 +88,22 @@
                                 </div>
                             </div>
 
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Student Category</label>
+                                    <select id="student-category" class="form-control">
+                                        <option value="regular">Regular</option>
+                                        <option value="centac">CENTAC</option>
+                                        <option value="management">Management</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Caste / Community</label>
+                                    <input type="text" id="caste-community" class="form-control"
+                                        placeholder="e.g. OC, BC, MBC, SC, ST">
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label class="form-label">Address</label>
                                 <textarea id="address" class="form-control" rows="2"></textarea>
@@ -160,6 +176,8 @@
                 document.getElementById('phone').value = s.phone || '';
                 document.getElementById('gender').value = s.gender || 'male';
                 document.getElementById('address').value = s.address || '';
+                document.getElementById('student-category').value = s.student_category || 'regular';
+                document.getElementById('caste-community').value = s.caste_community || '';
 
                 document.getElementById('course-id').value = s.course_id;
                 document.getElementById('batch-id').value = s.batch_id;
@@ -192,6 +210,8 @@
                 course_id: document.getElementById('course-id').value,
                 batch_id: document.getElementById('batch-id').value,
                 section_id: document.getElementById('section-id').value,
+                student_category: document.getElementById('student-category').value,
+                caste_community: document.getElementById('caste-community').value || null,
                 create_account: document.getElementById('create-account').checked,
                 password: 'password123'
             };

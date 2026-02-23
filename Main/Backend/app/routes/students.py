@@ -82,13 +82,16 @@ def add_student():
     data = request.get_json()
     sid = execute("""INSERT INTO student
         (reg_number, roll_number, name, email, phone, gender, dob, address, blood_group,
-         guardian_name, guardian_phone, batch_id, section_id, course_id, admission_type, admission_date, status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+         guardian_name, guardian_phone, batch_id, section_id, course_id, admission_type,
+         student_category, caste_community, admission_date, status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (data["reg_number"], data["roll_number"], data["name"], data.get("email"),
          data.get("phone"), data.get("gender"), data.get("dob"), data.get("address"),
          data.get("blood_group"), data.get("guardian_name"), data.get("guardian_phone"),
          data["batch_id"], data["section_id"], data["course_id"],
-         data.get("admission_type", "regular"), data.get("admission_date"), data.get("status", "active")))
+         data.get("admission_type", "regular"),
+         data.get("student_category", "regular"), data.get("caste_community"),
+         data.get("admission_date"), data.get("status", "active")))
 
     # Create user account for student (optional)
     if data.get("create_account"):
@@ -103,12 +106,15 @@ def add_student():
 def update_student(student_id):
     data = request.get_json()
     execute("""UPDATE student SET name=%s, email=%s, phone=%s, gender=%s, dob=%s, address=%s,
-               blood_group=%s, guardian_name=%s, guardian_phone=%s, section_id=%s, status=%s
+               blood_group=%s, guardian_name=%s, guardian_phone=%s, section_id=%s,
+               student_category=%s, caste_community=%s, status=%s
                WHERE student_id=%s""",
             (data["name"], data.get("email"), data.get("phone"), data.get("gender"),
              data.get("dob"), data.get("address"), data.get("blood_group"),
              data.get("guardian_name"), data.get("guardian_phone"),
-             data["section_id"], data.get("status", "active"), student_id))
+             data["section_id"],
+             data.get("student_category", "regular"), data.get("caste_community"),
+             data.get("status", "active"), student_id))
     return success(message="Student updated")
 
 @students_bp.route("/<int:student_id>", methods=["DELETE"])
