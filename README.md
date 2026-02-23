@@ -119,12 +119,20 @@ Navigate to: **`http://localhost:8000/login.html`**
 
 ---
 
-### 4. (Optional) Seed Sample Data
+### 4. (Optional) Populate Complete Database
 
-After setting up the database, you can populate it with realistic sample data (2 departments, 2 courses, 4 subjects, 2 staff, 5 students) by running:
+The project includes a powerful script to simulate a fully-functioning engineering college. Note: **Running this will DELETE all existing data in your database** and generate fresh data.
+
+It generates:
+- 4 Academic Years & 6 Departments
+- 12 Courses & ~480 Subjects
+- 1500 Students & 150 Staff
+- Attendance, Marks, Fees, Timetables, Scholarships, and more!
+
+Ensure XAMPP MySQL is running, then optionally simply run:
 
 ```powershell
-# From the project root — backend must be running first!
+# From the project root
 uv run python populate_db.py
 ```
 

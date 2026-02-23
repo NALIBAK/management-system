@@ -69,8 +69,8 @@ LAST_NAMES = [
     "Kannan","Lakshminarayanan","Mahalingam","Natarajan","Palani","Ramasamy","Senthil","Thirunavukkarasu","Velu","Sundaram"
 ]
 BLOOD_GROUPS = ["A+","A-","B+","B-","AB+","AB-","O+","O-"]
-CASTES = ["OC","BC","MBC","SC","ST","BC-Muslim","BC-Christian","DNC","SCA"]
-STUDENT_CATEGORIES = ["regular","centac","management"]
+CASTES = ["SC","ST","MBC","OBC","BC","OC"]
+STUDENT_CATEGORIES = ["centac","management"]
 GENDERS = ["male","female"]
 DESIGNATIONS = ["Professor","Associate Professor","Assistant Professor","Lecturer","Lab Instructor"]
 QUALIFICATIONS = ["Ph.D","M.Tech","M.E","M.Sc","M.Phil","MBA","B.Tech"]
@@ -166,7 +166,7 @@ def main():
         "fee_payment","fee_structure_detail","fee_structure","fee_component","fee_category",
         "scholarship","subject_allocation","grade_mapping",
         "activity_log","user_account","role",
-        "student","section","batch","subject","course","semester","academic_year","department","college"
+        "student","section","batch","subject","course","semester","academic_year","department","staff","college"
     ]
     for t in tables:
         run(conn, f"TRUNCATE TABLE `{t}`")
@@ -178,8 +178,8 @@ def main():
     print("\n[STEP 1] Creating college...")
     run(conn, """INSERT INTO college (name, code, address, phone, email)
                  VALUES (%s,%s,%s,%s,%s)""",
-        ("Sri Venkateswara College of Engineering", "SVCE",
-         "Sriperumbudur, Chennai - 602117, Tamil Nadu", "044-27152000", "admin@svce.ac.in"))
+        ("Rajiv Gandhi College of Engineering and Technology", "RGCET",
+         "Puducherry", "0413-1234567", "admin@rgcet.ac.in"))
     conn.commit()
     college_id = 1
     print(f"   College created (ID: {college_id})")
@@ -365,7 +365,7 @@ def main():
         lname = random.choice(LAST_NAMES)
         name = f"Dr. {fname} {lname}" if i < 30 else f"{fname} {lname}"
         emp_id = f"EMP{i+1:04d}"
-        email = f"{fname.lower()}.{lname.lower()}{i}@svce.ac.in"
+        email = f"{fname.lower()}.{lname.lower()}{i}@rgcet.ac.in"
         phone = f"98{random.randint(10000000,99999999)}"
         desig = DESIGNATIONS[min(i // 30, len(DESIGNATIONS)-1)]
         qual = random.choice(QUALIFICATIONS)
@@ -433,7 +433,7 @@ def main():
                 name = f"{fname} {lname}"
                 reg = f"REG{yr}{idx:05d}"
                 roll = f"{course_map[cid]['code']}{yr%100}{sname}{j+1:03d}"
-                email = f"{fname.lower()}{idx}@student.svce.ac.in"
+                email = f"{fname.lower()}{idx}@student.rgcet.ac.in"
                 phone = f"97{random.randint(10000000,99999999)}"
                 dob_year = yr - random.randint(17, 20)
                 dob = f"{dob_year}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
@@ -837,7 +837,7 @@ def main():
     print("=" * 60)
     print(f"""
   Summary:
-    🏛  College: Sri Venkateswara College of Engineering
+    🏛  College: Rajiv Gandhi College of Engineering and Technology
     📅  Academic Years: 4 (2022-2026)
     🏢  Departments: {len(DEPARTMENTS)}
     📚  Courses: {len(course_ids)}
