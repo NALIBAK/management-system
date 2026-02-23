@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from app.db import query, execute
 from app.utils.auth import login_required, roles_required
 from app.utils.response import success, error
+from app.utils.activity import log_activity
 
 attendance_bp = Blueprint("attendance", __name__)
 
@@ -51,6 +52,7 @@ def save_attendance():
                     (r["student_id"], data["subject_id"], data["section_id"],
                      data["period_id"], data["academic_year_id"], data["date"],
                      r.get("status", "P"), r.get("remarks")))
+    log_activity(request.current_user["user_id"], "create", "attendance", None, f"Attendance for {len(records)} students, section {data['section_id']}")
     return success(message=f"Attendance saved for {len(records)} students")
 
 @attendance_bp.route("/summary", methods=["GET"])

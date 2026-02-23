@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from app.db import query, execute
 from app.utils.auth import login_required, roles_required
 from app.utils.response import success, error
+from app.utils.activity import log_activity
 
 marks_bp = Blueprint("marks", __name__)
 
@@ -39,6 +40,7 @@ def add_exam():
                    data["academic_year_id"], data["semester_id"], data["exam_name"],
                    data.get("exam_date"), data["max_marks"], data.get("passing_marks", 0),
                    data.get("weightage_percent", 100)))
+    log_activity(request.current_user["user_id"], "create", "exam", eid, f"Created exam {data['exam_name']}")
     return success({"exam_id": eid}, "Exam created", 201)
 
 @marks_bp.route("/marks", methods=["GET"])
@@ -75,6 +77,7 @@ def save_marks():
         else:
             execute("INSERT INTO mark (exam_id, student_id, marks_obtained, is_absent, remarks) VALUES (%s,%s,%s,%s,%s)",
                     (exam_id, m["student_id"], m.get("marks_obtained", 0), m.get("is_absent", False), m.get("remarks")))
+    log_activity(request.current_user["user_id"], "create", "mark", None, f"Marks saved for {len(marks_list)} students, exam {exam_id}")
     return success(message=f"Marks saved for {len(marks_list)} students")
 
 @marks_bp.route("/results", methods=["GET"])

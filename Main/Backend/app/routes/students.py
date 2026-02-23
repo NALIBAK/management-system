@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from app.db import query, execute
 from app.utils.auth import login_required, roles_required, hash_password
 from app.utils.response import success, error
+from app.utils.activity import log_activity
 
 students_bp = Blueprint("students", __name__)
 
@@ -98,7 +99,7 @@ def add_student():
         execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
                    SELECT %s, %s, role_id, %s, 'student', 1 FROM role WHERE role_name='student'""",
                 (data["reg_number"], hash_password(data.get("password", data["reg_number"])), sid))
-
+    log_activity(request.current_user["user_id"], "create", "student", sid, f"Added student {data['name']}")
     return success({"student_id": sid}, "Student added", 201)
 
 @students_bp.route("/<int:student_id>", methods=["PUT"])
@@ -115,10 +116,12 @@ def update_student(student_id):
              data["section_id"],
              data.get("student_category", "regular"), data.get("caste_community"),
              data.get("status", "active"), student_id))
+    log_activity(request.current_user["user_id"], "update", "student", student_id, f"Updated student {data['name']}")
     return success(message="Student updated")
 
 @students_bp.route("/<int:student_id>", methods=["DELETE"])
 @roles_required("super_admin", "admin")
 def delete_student(student_id):
     execute("UPDATE student SET status='inactive' WHERE student_id=%s", (student_id,))
+    log_activity(request.current_user["user_id"], "delete", "student", student_id, "Deactivated student")
     return success(message="Student deactivated")

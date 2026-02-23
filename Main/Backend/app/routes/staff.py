@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from app.db import query, execute
 from app.utils.auth import login_required, roles_required, hash_password
 from app.utils.response import success, error
+from app.utils.activity import log_activity
 
 staff_bp = Blueprint("staff", __name__)
 
@@ -61,6 +62,7 @@ def add_staff():
             execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
                        VALUES (%s, %s, %s, %s, 'staff', 1)""",
                     (data["employee_id"], hash_password(data.get("password", data["employee_id"])), role_id, sid))
+    log_activity(request.current_user["user_id"], "create", "staff", sid, f"Added staff {data['name']}")
     return success({"staff_id": sid}, "Staff added", 201)
 
 @staff_bp.route("/<int:staff_id>", methods=["PUT"])
@@ -71,12 +73,14 @@ def update_staff(staff_id):
                qualification=%s, department_id=%s, status=%s WHERE staff_id=%s""",
             (data["name"], data.get("email"), data.get("phone"), data["designation"],
              data.get("qualification"), data["department_id"], data.get("status", "active"), staff_id))
+    log_activity(request.current_user["user_id"], "update", "staff", staff_id, f"Updated staff {data['name']}")
     return success(message="Staff updated")
 
 @staff_bp.route("/<int:staff_id>", methods=["DELETE"])
 @roles_required("super_admin", "admin")
 def delete_staff(staff_id):
     execute("UPDATE staff SET status='inactive' WHERE staff_id=%s", (staff_id,))
+    log_activity(request.current_user["user_id"], "delete", "staff", staff_id, "Deactivated staff")
     return success(message="Staff deactivated")
 
 # --- Subject Allocations ---

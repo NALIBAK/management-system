@@ -143,7 +143,16 @@ const aira = {
             if (res && res.data) {
                 this.conversationId = res.data.data?.conversation_id || this.conversationId;
                 const reply = res.data.data?.response || res.data.message || 'Sorry, I could not process that.';
-                this._appendMessage('aira', reply);
+
+                // Check if response contains confirmation request
+                if (res.data.data?.needs_confirmation) {
+                    this._appendConfirmation(
+                        res.data.data.preview || reply,
+                        res.data.data.action_id
+                    );
+                } else {
+                    this._appendMessage('aira', reply);
+                }
             } else {
                 this._appendMessage('aira', '⚠️ Could not connect to AIRA. Please check if the backend is running.');
             }
@@ -153,6 +162,52 @@ const aira = {
         } finally {
             this.isTyping = false;
             document.getElementById('aira-send').disabled = false;
+        }
+    },
+
+    _appendConfirmation(preview, actionId) {
+        const container = document.getElementById('aira-messages');
+        const div = document.createElement('div');
+        div.className = 'aira-msg aira';
+        div.innerHTML = `
+      <div class="aira-msg-avatar">🤖</div>
+      <div class="aira-msg-bubble">
+        <div class="aira-confirm-card">
+          <p><strong>⚠️ Confirm Action</strong></p>
+          <p>${preview}</p>
+          <div class="aira-confirm-actions" id="confirm-${actionId}">
+            <button class="btn btn-primary btn-sm aira-confirm-yes" onclick="aira._handleConfirm(${actionId})">✅ Confirm</button>
+            <button class="btn btn-ghost btn-sm aira-confirm-no" onclick="aira._handleCancel(${actionId})">❌ Cancel</button>
+          </div>
+        </div>
+      </div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    },
+
+    async _handleConfirm(actionId) {
+        const container = document.getElementById(`confirm-${actionId}`);
+        if (container) container.innerHTML = '<em>Processing...</em>';
+        try {
+            const res = await api.post('/aira/confirm-action', { action_id: actionId });
+            if (container) {
+                container.innerHTML = res?.data?.message
+                    ? `<span style="color:var(--success-color)">✅ ${res.data.message}</span>`
+                    : '<span style="color:var(--success-color)">✅ Action completed!</span>';
+            }
+        } catch (err) {
+            if (container) container.innerHTML = '<span style="color:var(--danger-color)">❌ Failed to execute action</span>';
+        }
+    },
+
+    async _handleCancel(actionId) {
+        const container = document.getElementById(`confirm-${actionId}`);
+        if (container) container.innerHTML = '<em>Cancelling...</em>';
+        try {
+            await api.post('/aira/cancel-action', { action_id: actionId });
+            if (container) container.innerHTML = '<span style="color:var(--text-muted)">🚫 Action cancelled</span>';
+        } catch (err) {
+            if (container) container.innerHTML = '<span style="color:var(--danger-color)">❌ Failed to cancel</span>';
         }
     }
 };

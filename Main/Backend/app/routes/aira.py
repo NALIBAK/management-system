@@ -180,6 +180,7 @@ MCP_TOOLS = [
 
 def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
     """Execute an MCP tool call and return the result."""
+    result = None
     try:
         if tool_name == "get_student_info":
             identifier = tool_args.get("identifier", "")
@@ -409,10 +410,49 @@ def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
             sql += " ORDER BY d.name, st.name, sub.name"
             return {"success": True, "data": query(sql, params)}
 
+        elif tool_name == "update_attendance":
+            # Write operation — requires confirmation, do NOT execute directly
+            student_id = tool_args.get("student_id")
+            subject_id = tool_args.get("subject_id")
+            date = tool_args.get("date")
+            att_status = tool_args.get("status", "P")
+            # Look up names for the preview
+            student = query("SELECT name, reg_number FROM student WHERE student_id=%s", (student_id,), fetchone=True)
+            subject = query("SELECT name FROM subject WHERE subject_id=%s", (subject_id,), fetchone=True)
+            student_name = student["name"] if student else f"ID:{student_id}"
+            subject_name = subject["name"] if subject else f"ID:{subject_id}"
+            status_label = {"P": "Present", "A": "Absent", "OD": "On Duty"}.get(att_status, att_status)
+            # Store as pending action
+            action_id = execute(
+                """INSERT INTO aira_action_log
+                   (user_id, action_type, entity_type, action_details, status)
+                   VALUES (%s, 'write', 'attendance', %s, 'pending')""",
+                (user["user_id"], json.dumps(tool_args))
+            )
+            return {
+                "success": True,
+                "needs_confirmation": True,
+                "action_id": action_id,
+                "preview": f"Mark **{student_name}** as **{status_label}** for **{subject_name}** on **{date}**"
+            }
+
         else:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+    finally:
+        # Log every tool execution to aira_action_log
+        if result is not None:
+            try:
+                execute(
+                    """INSERT INTO aira_action_log (user_id, action_type, entity_type, action_details, status)
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (user["user_id"], "tool_call", tool_name,
+                     json.dumps({"args": tool_args}),
+                     "success" if result.get("success") else "error")
+                )
+            except Exception:
+                pass
 
 def _get_db_context() -> str:
     """Query the database for a real-time snapshot to inject into the AIRA system prompt."""
@@ -513,6 +553,13 @@ def chat():
     if not message:
         return error("Message is required")
 
+    # Lazy cleanup: delete expired conversations
+    try:
+        execute("DELETE FROM aira_message WHERE conversation_id IN (SELECT conversation_id FROM aira_conversation WHERE expires_at < NOW())")
+        execute("DELETE FROM aira_conversation WHERE expires_at < NOW()")
+    except Exception:
+        pass
+
     # Get or create conversation
     if not conversation_id:
         from datetime import datetime, timedelta
@@ -565,7 +612,9 @@ INSTRUCTIONS:
         "scholarship report", "caste wise", "community wise", "sc/st", "obc scholarship",
         "extracurricular", "extra curricular", "technical activit", "non technical activit",
         "attendance report", "attendance of", "attendance for",
-        "marks report", "mark report", "marks of", "marks for"
+        "marks report", "mark report", "marks of", "marks for",
+        # Write actions
+        "mark "
     ]
     is_simple = any(k in msg_lower for k in simple_keywords)
 
@@ -589,6 +638,17 @@ INSTRUCTIONS:
                 ai_response = ollama_resp
     except Exception as e:
         ai_response = _smart_fallback(message, user)
+
+    # If smart fallback returned a dict (confirmation needed), return it directly
+    if isinstance(ai_response, dict):
+        return success({
+            "conversation_id": conversation_id,
+            "response": ai_response.get("preview", ""),
+            "needs_confirmation": True,
+            "action_id": ai_response.get("action_id"),
+            "preview": ai_response.get("preview", ""),
+            "tool_calls": tool_calls_made
+        })
 
     # Save assistant response
     execute("INSERT INTO aira_message (conversation_id, role, content) VALUES (%s,'assistant',%s)",
@@ -762,6 +822,37 @@ def _smart_fallback(message: str, user: dict) -> str:
                 return f"📝 **Marks Report** ({len(result['data'])} records):\n" + "\n".join(lines[:20])
             return "📝 No marks records found."
 
+        # Attendance Write (mark present/absent)
+        import re
+        att_match = re.search(r'mark\s+(.+?)\s+(present|absent|od)\s+(?:for\s+)?(.+?)(?:\s+(?:on|today|for)\s+(.+))?$', msg)
+        if att_match:
+            student_name = att_match.group(1).strip()
+            att_status = {"present": "P", "absent": "A", "od": "OD"}[att_match.group(2)]
+            subject_name = att_match.group(3).strip()
+            date_str = att_match.group(4).strip() if att_match.group(4) else None
+            if not date_str or date_str == "today":
+                from datetime import date
+                date_str = date.today().isoformat()
+            # Find student and subject
+            student = query("SELECT student_id, name FROM student WHERE LOWER(name) LIKE %s AND status='active' LIMIT 1",
+                            (f"%{student_name}%",), fetchone=True)
+            subject = query("SELECT subject_id, name FROM subject WHERE LOWER(name) LIKE %s LIMIT 1",
+                            (f"%{subject_name}%",), fetchone=True)
+            if student and subject:
+                result = execute_tool("update_attendance", {
+                    "student_id": student["student_id"],
+                    "subject_id": subject["subject_id"],
+                    "date": date_str,
+                    "status": att_status
+                }, user)
+                if result.get("needs_confirmation"):
+                    return result  # Return the confirmation dict directly
+                return "✅ Attendance request processed."
+            elif not student:
+                return f"❌ Could not find student matching **{student_name}**."
+            else:
+                return f"❌ Could not find subject matching **{subject_name}**."
+
         # Help
         if any(k in msg for k in ["help", "what can you do", "what can you", "capabilities", "commands"]):
             return """👋 Hi! I'm **AIRA**, your AI assistant for the College Management System. Here's what I can help you with:
@@ -782,6 +873,9 @@ def _smart_fallback(message: str, user: dict) -> str:
 🏆 **Activities**: "Extracurricular activities", "Technical activities"
 📊 **CGPA**: "CGPA report", "Student profile report"
 💰 **Fee Structure**: "Fee structure", "Fee breakdown"
+
+**✏️ Write Actions (with confirmation):**
+📅 **Attendance**: "Mark John present for DBMS today"
 
 > 💡 **Tip**: For more advanced queries, configure a Gemini API key in Settings → LLM Config."""
 
@@ -855,6 +949,79 @@ def run_tool():
              json.dumps({"args": tool_args, "result_count": len(result.get("data", []))}),
              "success" if result["success"] else "error"))
     return success(result)
+
+
+@aira_bp.route("/confirm-action", methods=["POST"])
+@login_required
+def confirm_action():
+    """Execute a previously pending write action after user confirmation."""
+    data = request.get_json()
+    action_id = data.get("action_id")
+    if not action_id:
+        return error("action_id is required")
+
+    # Fetch the pending action
+    action = query(
+        "SELECT * FROM aira_action_log WHERE action_id=%s AND status='pending' AND user_id=%s",
+        (action_id, request.current_user["user_id"]), fetchone=True
+    )
+    if not action:
+        return error("Action not found or already processed", 404)
+
+    try:
+        details = json.loads(action["action_details"])
+        entity_type = action["entity_type"]
+
+        if entity_type == "attendance":
+            # Execute the attendance update
+            student_id = details["student_id"]
+            subject_id = details["subject_id"]
+            date = details["date"]
+            att_status = details.get("status", "P")
+            # Check if record exists
+            existing = query(
+                "SELECT attendance_id FROM attendance WHERE student_id=%s AND subject_id=%s AND attendance_date=%s",
+                (student_id, subject_id, date), fetchone=True
+            )
+            if existing:
+                execute("UPDATE attendance SET status=%s WHERE attendance_id=%s",
+                        (att_status, existing["attendance_id"]))
+            else:
+                # Need section_id and period_id — get from student context
+                student = query("SELECT section_id FROM student WHERE student_id=%s", (student_id,), fetchone=True)
+                section_id = student["section_id"] if student else None
+                period = query("SELECT period_id FROM period_definition ORDER BY period_number LIMIT 1", fetchone=True)
+                period_id = period["period_id"] if period else None
+                ay = query("SELECT academic_year_id FROM academic_year WHERE is_current=1 LIMIT 1", fetchone=True)
+                ay_id = ay["academic_year_id"] if ay else None
+                execute(
+                    """INSERT INTO attendance (student_id, subject_id, section_id, period_id,
+                       academic_year_id, attendance_date, status) VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                    (student_id, subject_id, section_id, period_id, ay_id, date, att_status)
+                )
+            # Mark action as completed
+            execute("UPDATE aira_action_log SET status='completed' WHERE action_id=%s", (action_id,))
+            return success({"completed": True}, "✅ Attendance updated successfully!")
+        else:
+            return error(f"Unsupported action type: {entity_type}")
+    except Exception as e:
+        execute("UPDATE aira_action_log SET status='error' WHERE action_id=%s", (action_id,))
+        return error(f"Failed to execute action: {str(e)}")
+
+
+@aira_bp.route("/cancel-action", methods=["POST"])
+@login_required
+def cancel_action():
+    """Cancel a previously pending write action."""
+    data = request.get_json()
+    action_id = data.get("action_id")
+    if not action_id:
+        return error("action_id is required")
+    execute(
+        "UPDATE aira_action_log SET status='cancelled' WHERE action_id=%s AND status='pending' AND user_id=%s",
+        (action_id, request.current_user["user_id"])
+    )
+    return success(message="Action cancelled")
 
 @aira_bp.route("/conversations", methods=["GET"])
 @login_required

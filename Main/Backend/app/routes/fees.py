@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from app.db import query, execute
 from app.utils.auth import login_required, roles_required
 from app.utils.response import success, error
+from app.utils.activity import log_activity
 
 fees_bp = Blueprint("fees", __name__)
 
@@ -71,6 +72,7 @@ def add_payment():
                   (data["student_id"], data["fee_structure_id"], data["academic_year_id"],
                    data["amount_paid"], data.get("payment_date"), data["payment_mode"],
                    data.get("receipt_number"), data.get("transaction_ref"), data.get("remarks")))
+    log_activity(request.current_user["user_id"], "create", "fee_payment", pid, f"Payment ₹{data['amount_paid']} for student {data['student_id']}")
     return success({"payment_id": pid}, "Payment recorded", 201)
 
 @fees_bp.route("/balance/<int:student_id>", methods=["GET"])
@@ -116,4 +118,5 @@ def add_scholarship():
                      VALUES (%s,%s,%s,%s,%s)""",
                   (data["student_id"], data["academic_year_id"], data["scholarship_name"],
                    data["amount"], data.get("status", "pending")))
+    log_activity(request.current_user["user_id"], "create", "scholarship", sid, f"Scholarship {data['scholarship_name']} for student {data['student_id']}")
     return success({"scholarship_id": sid}, "Scholarship added", 201)

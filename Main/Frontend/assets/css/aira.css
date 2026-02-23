@@ -309,3 +309,39 @@
     background: var(--accent);
     color: #fff;
 }
+
+/* --- Confirmation Card --- */
+.aira-confirm-card {
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--warning-color, #f59e0b);
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.aira-confirm-card p {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.aira-confirm-card p:last-of-type {
+    margin-bottom: 10px;
+}
+
+.aira-confirm-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.aira-confirm-actions .btn {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.aira-confirm-actions em,
+.aira-confirm-actions span {
+    font-size: 12px;
+    line-height: 2;
+}
