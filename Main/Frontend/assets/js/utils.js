@@ -81,7 +81,7 @@ const utils = {
         const sel = document.getElementById(selectId);
         if (!sel) return;
         sel.innerHTML = `<option value="">${placeholder}</option>` +
-            items.map(i => `<option value="${i[valueKey]}">${i[labelKey]}</option>`).join('');
+            items.map(i => `<option value="${i[valueKey]}">${typeof labelKey === 'function' ? labelKey(i) : i[labelKey]}</option>`).join('');
     },
 
     // Get form data as object
