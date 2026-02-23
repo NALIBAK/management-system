@@ -161,7 +161,7 @@ ollama pull gemma3:1b
 # Ollama runs automatically on http://localhost:11434
 ```
 
-> **Important:** The default configured model is `gemma3:1b`. If you pull a different model (e.g., `llama3.2`, `mistral`), update it in **Settings → LLM Config** inside the app.
+> **Important:** The default configured model is `gemma3:1b`. If you pull a different model (e.g., `mistral`, `llama3.2`), update it in **Settings → LLM Config** inside the app.
 
 ### Full AI Mode — Google Gemini
 
@@ -363,7 +363,7 @@ The following bugs were identified and resolved during initial setup:
 | Invalid password on login | Default `seed.sql` used a PHP-style bcrypt hash incompatible with Python's `bcrypt` library | Regenerated hash using `bcrypt.hashpw()` in Python |
 | CORS errors on Timetable/Attendance pages | Backend returned `500 Internal Server Error` for period definitions due to unserializable `datetime.timedelta` objects, causing CORS headers to drop | Added `_serialize()` helper in `app/utils/response.py` to convert `timedelta` and `Decimal` to JSON-safe types |
 | `login_required` blocking OPTIONS preflight | The auth decorator did not short-circuit `OPTIONS` method requests | Added `OPTIONS` pass-through in decorator |
-| AIRA using wrong Ollama model | Backend was hard-coded to `llama3.2` which may not be installed | Updated default to `gemma3:1b`; configurable via Settings → LLM Config |
+| AIRA using wrong Ollama model | Backend was hard-coded to `llama3.2` which may not be installed | Updated default to `gemma3:1b`; all references now use `gemma3:1b` |
 | `add_subject` API 500 error | Frontend sent field as `semester`, backend expected `semester_number` | Route now accepts both field names |
 | Blueprint trailing-slash issues | Flask strict_slashes default caused redirect on trailing-slash mismatch | Set `app.url_map.strict_slashes = False` in app factory |
 | AIRA "show student" keyword collision | "Show student CGPA report" matched generic "show student" before CGPA report handler | Added `is_report_query` guard to check report-specific keywords first |

@@ -32,7 +32,7 @@
 | **Frontend** | HTML, CSS, JavaScript | Vanilla implementation for maximum control and speed. |
 | **Backend** | Python (FastAPI/Flask) | Lightweight and efficient backend. FastAPI recommended for async support. |
 | **Database** | MySQL (XAMPP) | Relational database for structured data. |
-| **AI Integration** | Ollama (Llama 3.2) | Local LLM for privacy and cost-efficiency. |
+| **AI Integration** | Ollama (gemma3:1b) | Local LLM for privacy and cost-efficiency. |
 | **Orchestration** | Python Scripts | Custom scripts for database management and AI interaction. |
 
 ---
@@ -139,7 +139,7 @@
 
 #### LLM Backend
 - **Primary (Cloud):** Google Gemini API — user enters API key in settings
-- **Fallback (Local):** Ollama with Llama 3.2 — used when no API key provided
+- **Fallback (Local):** Ollama with gemma3:1b — used when no API key provided
 - **Model Selection:** If API key is provided, fetch available models from the API and let user select their preferred model
 - **MCP Integration:** Uses Model Context Protocol to interact with app data.
 - **MCP Communication Flow:**
