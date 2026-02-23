@@ -264,7 +264,8 @@ INSTRUCTIONS:
             ai_response = _call_gemini(llm_config, system_prompt, messages, MCP_TOOLS)
         else:
             # Ollama (with DB context injected in system prompt)
-            ollama_resp = _call_ollama(system_prompt, messages)
+            ollama_model = llm_config.get("selected_model", "gemma3:1b") if llm_config else "gemma3:1b"
+            ollama_resp = _call_ollama(system_prompt, messages, ollama_model)
             if "Ollama is not available" in ollama_resp or "Error:" in ollama_resp:
                 ai_response = _smart_fallback(message, user)
             else:
@@ -397,10 +398,10 @@ For full AI capabilities, configure a **Gemini API key** in Settings → LLM Con
     except Exception as e:
         return f"⚠️ Sorry, I encountered an error while processing your query: {str(e)}"
 
-def _call_ollama(system_prompt: str, messages: list) -> str:
+def _call_ollama(system_prompt: str, messages: list, model: str = "gemma3:1b") -> str:
     try:
         payload = {
-            "model": "gemma3",
+            "model": model,
             "messages": [{"role": "system", "content": system_prompt}] + messages,
             "stream": False
         }
@@ -473,12 +474,12 @@ def save_config():
                    fallback_provider=%s, fallback_model=%s, temperature=%s, max_tokens=%s, updated_at=NOW()
                    WHERE config_id=%s""",
                 (data.get("provider"), data.get("api_key"), data.get("selected_model"),
-                 data.get("fallback_provider", "ollama"), data.get("fallback_model", "llama3.2"),
+                 data.get("fallback_provider", "ollama"), data.get("fallback_model", "gemma3:1b"),
                  data.get("temperature", 0.7), data.get("max_tokens", 2048), existing["config_id"]))
     else:
         execute("""INSERT INTO llm_config (provider, api_key_encrypted, selected_model, fallback_provider, fallback_model, temperature, max_tokens)
                    VALUES (%s,%s,%s,%s,%s,%s,%s)""",
                 (data.get("provider"), data.get("api_key"), data.get("selected_model"),
-                 data.get("fallback_provider", "ollama"), data.get("fallback_model", "llama3.2"),
+                 data.get("fallback_provider", "ollama"), data.get("fallback_model", "gemma3:1b"),
                  data.get("temperature", 0.7), data.get("max_tokens", 2048)))
     return success(message="LLM configuration saved")

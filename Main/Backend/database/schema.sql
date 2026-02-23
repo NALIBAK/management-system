@@ -426,9 +426,9 @@ CREATE TABLE IF NOT EXISTS llm_config (
     college_id INT,
     provider VARCHAR(50) DEFAULT 'ollama',
     api_key_encrypted TEXT,
-    selected_model VARCHAR(100) DEFAULT 'llama3.2',
+    selected_model VARCHAR(100) DEFAULT 'gemma3:1b',
     fallback_provider VARCHAR(50) DEFAULT 'ollama',
-    fallback_model VARCHAR(100) DEFAULT 'llama3.2',
+    fallback_model VARCHAR(100) DEFAULT 'gemma3:1b',
     temperature FLOAT DEFAULT 0.7,
     max_tokens INT DEFAULT 2048,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
