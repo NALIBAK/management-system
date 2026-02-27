@@ -175,6 +175,74 @@ MCP_TOOLS = [
                 "exam_type_id": {"type": "integer"}
             }
         }
+    },
+    {
+        "name": "get_top_students",
+        "description": "Get top N students by CGPA or attendance percentage",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of top students (default 10)"},
+                "department_id": {"type": "integer"},
+                "order_by": {"type": "string", "enum": ["cgpa", "attendance"]}
+            }
+        }
+    },
+    {
+        "name": "get_low_attendance",
+        "description": "Get students with attendance percentage below a threshold",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "threshold": {"type": "number", "description": "Percentage threshold (default 75)"},
+                "section_id": {"type": "integer"},
+                "department_id": {"type": "integer"}
+            }
+        }
+    },
+    {
+        "name": "get_fee_defaulters",
+        "description": "Get students who have pending fee balance (defaulters)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "academic_year_id": {"type": "integer"},
+                "department_id": {"type": "integer"},
+                "min_balance": {"type": "number", "description": "Minimum balance amount to include"}
+            }
+        }
+    },
+    {
+        "name": "get_staff_by_department",
+        "description": "Get staff list for a department or all departments",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "department_id": {"type": "integer"},
+                "designation": {"type": "string"}
+            }
+        }
+    },
+    {
+        "name": "get_student_by_name",
+        "description": "Search for a student by name (fuzzy match), returns their full profile",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Student name or partial name"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "get_sections_list",
+        "description": "Get list of all sections with their course and department",
+        "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "get_combined_summary",
+        "description": "Get full college dashboard summary: counts, averages, top departments",
+        "inputSchema": {"type": "object", "properties": {}}
     }
 ]
 
@@ -436,6 +504,167 @@ def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
                 "preview": f"Mark **{student_name}** as **{status_label}** for **{subject_name}** on **{date}**"
             }
 
+        elif tool_name == "get_top_students":
+            limit = int(tool_args.get("limit", 10))
+            order_by = tool_args.get("order_by", "cgpa")
+            if order_by == "attendance":
+                sql = """SELECT st.name, st.reg_number, st.roll_number,
+                         c.name as course_name, d.name as department_name,
+                         ROUND(SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END)*100.0/COUNT(*),2) as attendance_pct
+                         FROM student st
+                         JOIN course c ON st.course_id=c.course_id
+                         JOIN department d ON c.department_id=d.department_id
+                         JOIN attendance a ON a.student_id=st.student_id
+                         WHERE st.status='active'"""
+                params = []
+                if tool_args.get("department_id"):
+                    sql += " AND c.department_id=%s"; params.append(tool_args["department_id"])
+                sql += f" GROUP BY st.student_id ORDER BY attendance_pct DESC LIMIT {limit}"
+            else:
+                sql = """SELECT st.name, st.reg_number, c.name as course_name,
+                         d.name as department_name, COALESCE(MAX(sr.cgpa),0) as cgpa
+                         FROM student st
+                         JOIN course c ON st.course_id=c.course_id
+                         JOIN department d ON c.department_id=d.department_id
+                         LEFT JOIN semester_result sr ON sr.student_id=st.student_id
+                         WHERE st.status='active'"""
+                params = []
+                if tool_args.get("department_id"):
+                    sql += " AND c.department_id=%s"; params.append(tool_args["department_id"])
+                sql += f" GROUP BY st.student_id ORDER BY cgpa DESC LIMIT {limit}"
+            return {"success": True, "data": query(sql, params)}
+
+        elif tool_name == "get_low_attendance":
+            threshold = float(tool_args.get("threshold", 75))
+            sql = """SELECT st.name, st.reg_number, st.roll_number,
+                     c.name as course_name, d.name as department_name,
+                     sec.name as section_name,
+                     COUNT(*) as total_classes,
+                     SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) as present,
+                     ROUND(SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END)*100.0/COUNT(*),2) as attendance_pct
+                     FROM attendance a
+                     JOIN student st ON a.student_id=st.student_id
+                     JOIN course c ON st.course_id=c.course_id
+                     JOIN department d ON c.department_id=d.department_id
+                     JOIN section sec ON st.section_id=sec.section_id
+                     WHERE st.status='active'"""
+            params = []
+            if tool_args.get("section_id"):
+                sql += " AND a.section_id=%s"; params.append(tool_args["section_id"])
+            if tool_args.get("department_id"):
+                sql += " AND c.department_id=%s"; params.append(tool_args["department_id"])
+            sql += " GROUP BY a.student_id HAVING attendance_pct < %s ORDER BY attendance_pct ASC"
+            params.append(threshold)
+            return {"success": True, "data": query(sql, params)}
+
+        elif tool_name == "get_fee_defaulters":
+            min_balance = float(tool_args.get("min_balance", 0))
+            ay_id = tool_args.get("academic_year_id")
+            fee_where = "AND fs.academic_year_id=%s" if ay_id else ""
+            pay_where = "AND academic_year_id=%s" if ay_id else ""
+            sql = f"""SELECT st.name, st.reg_number, st.roll_number,
+                     c.name as course_name, d.name as department_name,
+                     COALESCE(fs_total.total_due, 0) as total_due,
+                     COALESCE(fp_total.total_paid, 0) as total_paid,
+                     COALESCE(fs_total.total_due, 0) - COALESCE(fp_total.total_paid, 0) as balance
+                     FROM student st
+                     JOIN course c ON st.course_id=c.course_id
+                     JOIN department d ON c.department_id=d.department_id
+                     LEFT JOIN (
+                         SELECT st2.student_id, SUM(fs.total_amount) as total_due
+                         FROM student st2 JOIN fee_structure fs ON fs.course_id=st2.course_id
+                         WHERE 1=1 {fee_where} GROUP BY st2.student_id
+                     ) fs_total ON fs_total.student_id=st.student_id
+                     LEFT JOIN (
+                         SELECT student_id, SUM(amount_paid) as total_paid
+                         FROM fee_payment WHERE 1=1 {pay_where} GROUP BY student_id
+                     ) fp_total ON fp_total.student_id=st.student_id
+                     WHERE st.status='active'"""
+            params = []
+            if ay_id:
+                params.extend([ay_id, ay_id])
+            if tool_args.get("department_id"):
+                sql += " AND c.department_id=%s"; params.append(tool_args["department_id"])
+            sql += " HAVING balance > %s ORDER BY balance DESC"
+            params.append(min_balance)
+            return {"success": True, "data": query(sql, params)}
+
+        elif tool_name == "get_staff_by_department":
+            sql = """SELECT s.name, s.designation, s.email, s.phone,
+                     d.name as department_name, d.code as dept_code,
+                     s.qualification, s.experience_years
+                     FROM staff s
+                     LEFT JOIN department d ON s.department_id=d.department_id
+                     WHERE s.status='active'"""
+            params = []
+            if tool_args.get("department_id"):
+                sql += " AND s.department_id=%s"; params.append(tool_args["department_id"])
+            if tool_args.get("designation"):
+                sql += " AND s.designation LIKE %s"; params.append(f"%{tool_args['designation']}%")
+            sql += " ORDER BY d.name, s.name"
+            return {"success": True, "data": query(sql, params)}
+
+        elif tool_name == "get_student_by_name":
+            name = tool_args.get("name", "")
+            result = query("""SELECT st.student_id, st.name, st.reg_number, st.roll_number,
+                              st.email, st.phone, st.gender, st.student_category,
+                              st.caste_community, st.status,
+                              c.name as course_name, d.name as department_name,
+                              sec.name as section_name,
+                              COALESCE(MAX(sr.cgpa), 0) as cgpa
+                              FROM student st
+                              JOIN course c ON st.course_id=c.course_id
+                              JOIN department d ON c.department_id=d.department_id
+                              JOIN section sec ON st.section_id=sec.section_id
+                              LEFT JOIN semester_result sr ON sr.student_id=st.student_id
+                              WHERE (st.name LIKE %s OR st.reg_number LIKE %s) AND st.status='active'
+                              GROUP BY st.student_id ORDER BY st.name""",
+                           (f"%{name}%", f"%{name}%"))
+            return {"success": True, "data": result}
+
+        elif tool_name == "get_sections_list":
+            result = query("""SELECT sec.section_id, sec.name as section_name,
+                              c.name as course_name, d.name as department_name,
+                              COALESCE(sem.semester_number, 0) as semester_number,
+                              COUNT(st.student_id) as student_count
+                              FROM section sec
+                              JOIN course c ON sec.course_id=c.course_id
+                              JOIN department d ON c.department_id=d.department_id
+                              LEFT JOIN semester sem ON sec.semester_id=sem.semester_id
+                              LEFT JOIN student st ON st.section_id=sec.section_id AND st.status='active'
+                              GROUP BY sec.section_id ORDER BY d.name, c.name, semester_number""")
+            return {"success": True, "data": result}
+
+        elif tool_name == "get_combined_summary":
+            students = query("SELECT COUNT(*) as c FROM student WHERE status='active'", fetchone=True)
+            staff    = query("SELECT COUNT(*) as c FROM staff WHERE status='active'", fetchone=True)
+            courses  = query("SELECT COUNT(*) as c FROM course", fetchone=True)
+            depts    = query("SELECT COUNT(*) as c FROM department", fetchone=True)
+            subjects = query("SELECT COUNT(*) as c FROM subject", fetchone=True)
+            fees     = query("SELECT COALESCE(SUM(amount_paid),0) as total FROM fee_payment", fetchone=True)
+            att_avg  = query("""SELECT ROUND(AVG(pct),2) as avg FROM (
+                SELECT ROUND(SUM(CASE WHEN status='P' THEN 1 ELSE 0 END)*100.0/COUNT(*),2) as pct
+                FROM attendance GROUP BY student_id,subject_id HAVING COUNT(*)>0) x""", fetchone=True)
+            dept_stats = query("""SELECT d.name, COUNT(DISTINCT st.student_id) as students,
+                                  COUNT(DISTINCT s.staff_id) as staff
+                                  FROM department d
+                                  LEFT JOIN course c ON c.department_id=d.department_id
+                                  LEFT JOIN student st ON st.course_id=c.course_id AND st.status='active'
+                                  LEFT JOIN staff s ON s.department_id=d.department_id AND s.status='active'
+                                  GROUP BY d.department_id ORDER BY students DESC""")
+            return {"success": True, "data": {
+                "summary": {
+                    "active_students": students["c"] if students else 0,
+                    "active_staff": staff["c"] if staff else 0,
+                    "courses": courses["c"] if courses else 0,
+                    "departments": depts["c"] if depts else 0,
+                    "subjects": subjects["c"] if subjects else 0,
+                    "total_fees_collected": float(fees["total"]) if fees else 0,
+                    "avg_attendance_pct": float(att_avg["avg"]) if att_avg and att_avg["avg"] else 0,
+                },
+                "departments": dept_stats
+            }}
+
         else:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
     except Exception as e:
@@ -613,6 +842,14 @@ INSTRUCTIONS:
         "extracurricular", "extra curricular", "technical activit", "non technical activit",
         "attendance report", "attendance of", "attendance for",
         "marks report", "mark report", "marks of", "marks for",
+        # New tool patterns
+        "top student", "best student", "highest cgpa", "top 5", "top 10",
+        "low attendance", "below 75", "below attendance", "defaulter", "fee defaulter",
+        "pending fee", "unpaid fee", "fee balance", "fee due",
+        "staff in", "staff of", "faculty in", "faculty of",
+        "section list", "all section", "list section", "show section",
+        "college summary", "dashboard", "overview", "full summary",
+        "find student", "search student", "student named", "look up student",
         # Write actions
         "mark "
     ]
@@ -626,8 +863,8 @@ INSTRUCTIONS:
             # Fast path: use smart fallback which queries DB directly
             ai_response = _smart_fallback(message, user)
         elif llm_config and llm_config.get("api_key_encrypted"):
-            # Gemini API (with DB context injected in system prompt)
-            ai_response = _call_gemini(llm_config, system_prompt, messages, MCP_TOOLS)
+            # Gemini API — full agentic tool-calling loop
+            ai_response = _call_gemini(llm_config, system_prompt, messages, MCP_TOOLS, user=user)
         else:
             # Ollama (with DB context injected in system prompt)
             ollama_model = llm_config.get("selected_model", "gemma3:1b") if llm_config else "gemma3:1b"
@@ -822,9 +1059,121 @@ def _smart_fallback(message: str, user: dict) -> str:
                 return f"📝 **Marks Report** ({len(result['data'])} records):\n" + "\n".join(lines[:20])
             return "📝 No marks records found."
 
+        # ===== NEW AUTONOMOUS TOOL SMART FALLBACKS =====
+
+        # Top students
+        import re as _re
+        top_match = _re.search(r'top\s+(\d+)', msg)
+        top_n = int(top_match.group(1)) if top_match else 10
+        if any(k in msg for k in ["top student", "best student", "highest cgpa", "top 5", "top 10"]):
+            order = "attendance" if "attendance" in msg else "cgpa"
+            result = execute_tool("get_top_students", {"limit": top_n, "order_by": order}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                col = "attendance_pct" if order == "attendance" else "cgpa"
+                col_label = "Attendance %" if order == "attendance" else "CGPA"
+                header = f"| # | Name | Reg No | Course | {col_label} |\n|---|---|---|---|---|\n"
+                table = "".join(f"| {i+1} | **{r['name']}** | {r['reg_number']} | {r['course_name']} | **{r.get(col, 0)}** |\n" for i, r in enumerate(rows))
+                return f"🏆 **Top {len(rows)} Students by {col_label}:**\n\n{header}{table}"
+            return "🏆 No student data available yet."
+
+        # Low attendance
+        thr_match = _re.search(r'below\s+(\d+)', msg)
+        threshold = float(thr_match.group(1)) if thr_match else 75.0
+        if any(k in msg for k in ["low attendance", "below 75", "below attendance", "attendance defaulter"]):
+            result = execute_tool("get_low_attendance", {"threshold": threshold}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                header = "| Name | Reg No | Section | Present | Total | Attendance % |\n|---|---|---|---|---|---|\n"
+                table = "".join(f"| **{r['name']}** | {r['reg_number']} | {r.get('section_name','N/A')} | {r['present']} | {r['total_classes']} | **{r['attendance_pct']}%** |\n" for r in rows)
+                return f"⚠️ **Students with Attendance Below {threshold}%** ({len(rows)} students):\n\n{header}{table}" if rows else f"✅ No students found with attendance below {threshold}%."
+            return "⚠️ No attendance data available yet."
+
+        # Fee defaulters
+        if any(k in msg for k in ["defaulter", "fee defaulter", "pending fee", "unpaid fee", "fee balance", "fee due"]):
+            result = execute_tool("get_fee_defaulters", {}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                header = "| Name | Reg No | Course | Total Due | Paid | Balance |\n|---|---|---|---|---|---|\n"
+                table = "".join(f"| **{r['name']}** | {r['reg_number']} | {r['course_name']} | ₹{float(r.get('total_due',0)):,.0f} | ₹{float(r.get('total_paid',0)):,.0f} | **₹{float(r.get('balance',0)):,.0f}** |\n" for r in rows)
+                return f"💰 **Fee Defaulters** ({len(rows)} students):\n\n{header}{table}" if rows else "✅ No fee defaulters found — all students are up to date!"
+            return "💰 No fee structure data configured yet."
+
+        # Staff by department
+        if any(k in msg for k in ["staff in", "staff of", "faculty in", "faculty of", "list staff", "show staff", "all staff"]):
+            result = execute_tool("get_staff_by_department", {}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                header = "| Name | Designation | Department | Qualification |\n|---|---|---|---|\n"
+                table = "".join(f"| **{r['name']}** | {r['designation']} | {r.get('department_name','N/A')} | {r.get('qualification','N/A')} |\n" for r in rows)
+                return f"👨‍🏫 **Staff List** ({len(rows)} members):\n\n{header}{table}"
+            return "👨‍🏫 No staff records found."
+
+        # Find student by name
+        name_match = _re.search(r'(?:find|search|student named?|look up student|who is)\s+(.+?)(?:\?|$)', msg)
+        if name_match and any(k in msg for k in ["find student", "search student", "student named", "look up student", "who is"]):
+            name = name_match.group(1).strip()
+            result = execute_tool("get_student_by_name", {"name": name}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                if len(rows) == 1:
+                    s = rows[0]
+                    return f"""👤 **Student Profile: {s['name']}**
+
+| Field | Value |
+|---|---|
+| **Reg Number** | {s['reg_number']} |
+| **Roll Number** | {s['roll_number']} |
+| **Course** | {s['course_name']} |
+| **Department** | {s['department_name']} |
+| **Section** | {s['section_name']} |
+| **CGPA** | {s.get('cgpa', 0)} |
+| **Category** | {s.get('student_category', 'N/A')} |
+| **Community** | {s.get('caste_community', 'N/A')} |
+| **Email** | {s.get('email', 'N/A')} |
+| **Phone** | {s.get('phone', 'N/A')} |"""
+                else:
+                    lines = [f"• **{s['name']}** ({s['reg_number']}) — {s['course_name']}, CGPA: {s.get('cgpa',0)}" for s in rows]
+                    return f"🔍 Found **{len(rows)} students** matching '{name}':\n" + "\n".join(lines)
+            return f"🔍 No student found matching '{name}'."
+
+        # Sections list
+        if any(k in msg for k in ["section list", "all section", "list section", "show section"]):
+            result = execute_tool("get_sections_list", {}, user)
+            if result.get("success") and result.get("data"):
+                rows = result["data"]
+                header = "| Section | Course | Dept | Semester | Students |\n|---|---|---|---|---|\n"
+                table = "".join(f"| **{r['section_name']}** | {r['course_name']} | {r['department_name']} | {r.get('semester_number','N/A')} | {r['student_count']} |\n" for r in rows)
+                return f"📋 **Sections** ({len(rows)} total):\n\n{header}{table}"
+            return "📋 No sections found."
+
+        # Dashboard / combined summary
+        if any(k in msg for k in ["college summary", "dashboard", "overview", "full summary"]):
+            result = execute_tool("get_combined_summary", {}, user)
+            if result.get("success") and result.get("data"):
+                s = result["data"]["summary"]
+                depts = result["data"].get("departments", [])
+                dept_table = ""
+                if depts:
+                    dept_table = "\n\n**By Department:**\n| Department | Students | Staff |\n|---|---|---|\n"
+                    dept_table += "".join(f"| {d['name']} | {d['students']} | {d['staff']} |\n" for d in depts)
+                return f"""📊 **College Dashboard Summary**
+
+| Metric | Value |
+|---|---|
+| 🎓 Active Students | **{s['active_students']}** |
+| 👨‍🏫 Active Staff | **{s['active_staff']}** |
+| 🏛️ Departments | **{s['departments']}** |
+| 📚 Courses | **{s['courses']}** |
+| 📖 Subjects | **{s['subjects']}** |
+| 💰 Total Fees Collected | **₹{s['total_fees_collected']:,.2f}** |
+| 📅 Avg Attendance | **{s['avg_attendance_pct']}%** |{dept_table}"""
+            return "📊 Summary data unavailable."
+
         # Attendance Write (mark present/absent)
         import re
         att_match = re.search(r'mark\s+(.+?)\s+(present|absent|od)\s+(?:for\s+)?(.+?)(?:\s+(?:on|today|for)\s+(.+))?$', msg)
+
         if att_match:
             student_name = att_match.group(1).strip()
             att_status = {"present": "P", "absent": "A", "od": "OD"}[att_match.group(2)]
@@ -879,21 +1228,24 @@ def _smart_fallback(message: str, user: dict) -> str:
 
 > 💡 **Tip**: For more advanced queries, configure a Gemini API key in Settings → LLM Config."""
 
-        # Default
-        return f"""🤖 I understood your question: *"{message}"*
+        # Default fallback with richer suggestions
+        return f"""🤖 I understand you asked: *"{message}"*
 
-I'm currently running in **built-in mode** (no external LLM configured). I can answer common data queries and generate reports.
+I didn't find a direct match, but I'm here to help! Here are things I can answer:
 
-Try asking:
-- "Show student CGPA report"
-- "Show category wise report"
-- "Attendance report"
-- "Eligibility report"
-- "Scholarship report"
-- "Fee structure report"
-- "Extracurricular activities"
+| Query Type | Example |
+|---|---|
+| Students | "List all students", "How many students?" |
+| Staff | "Show staff list", "How many teachers?" |
+| Attendance | "Attendance report", "Students below 75% attendance" |
+| Marks | "Marks report", "Show marks for semester 1" |
+| CGPA | "CGPA report", "Top 10 students by CGPA" |
+| Fees | "Fee defaulters", "Fee structure report", "Total fees collected" |
+| Reports | "Eligibility report", "Scholarship report", "Category wise report" |
+| Activities | "Extracurricular activities", "Technical events" |
+| Write | "Mark [name] present for [subject] today" |
 
-For full AI capabilities, configure a **Gemini API key** in Settings → LLM Config."""
+> 💡 For full natural language understanding, configure a **Gemini API key** in Settings → LLM Config."""
 
     except Exception as e:
         return f"⚠️ Sorry, I encountered an error while processing your query: {str(e)}"
@@ -911,22 +1263,83 @@ def _call_ollama(system_prompt: str, messages: list, model: str = "gemma3:1b") -
     except Exception as e:
         return f"Ollama is not available. Please start Ollama or configure a Gemini API key. Error: {str(e)}"
 
-def _call_gemini(config: dict, system_prompt: str, messages: list, tools: list) -> str:
+def _call_gemini(config: dict, system_prompt: str, messages: list, tools: list, user: dict = None) -> str:
+    """Agentic Gemini call with real MCP tool-calling loop (up to 5 iterations)."""
     try:
-        api_key = config["api_key_encrypted"]  # In production, decrypt this
-        model = config.get("selected_model", "gemini-1.5-flash")
+        api_key = config["api_key_encrypted"]
+        model = config.get("selected_model", "gemini-2.0-flash")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+        # Convert MCP tools to Gemini function declarations
+        function_declarations = []
+        for t in tools:
+            decl = {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t.get("inputSchema", {"type": "object", "properties": {}})
+            }
+            function_declarations.append(decl)
+
+        # Build conversation contents
         contents = []
         for m in messages:
             role = "user" if m["role"] == "user" else "model"
             contents.append({"role": role, "parts": [{"text": m["content"]}]})
+
         payload = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
-            "contents": contents
+            "contents": contents,
+            "tools": [{"function_declarations": function_declarations}],
+            "tool_config": {"function_calling_config": {"mode": "AUTO"}}
         }
-        resp = http_requests.post(url, json=payload, timeout=60)
+
+        MAX_ITERATIONS = 5
+        for iteration in range(MAX_ITERATIONS):
+            resp = http_requests.post(url, json=payload, timeout=60)
+            resp.raise_for_status()
+            resp_data = resp.json()
+
+            candidate = resp_data.get("candidates", [{}])[0]
+            content = candidate.get("content", {})
+            parts = content.get("parts", [])
+
+            # Check if Gemini wants to call a tool
+            has_function_call = any("functionCall" in p for p in parts)
+
+            if not has_function_call:
+                # Final text response
+                text_parts = [p.get("text", "") for p in parts if "text" in p]
+                return " ".join(text_parts).strip() or "I couldn't generate a response."
+
+            # Execute all requested tool calls
+            tool_results = []
+            for part in parts:
+                if "functionCall" in part:
+                    fc = part["functionCall"]
+                    tool_name = fc.get("name")
+                    tool_args = fc.get("args", {})
+                    # Execute on real DB
+                    tool_result = execute_tool(tool_name, tool_args, user or {})
+                    tool_results.append({
+                        "functionResponse": {
+                            "name": tool_name,
+                            "response": tool_result
+                        }
+                    })
+
+            # Append model's tool-call turn + tool results back to conversation
+            payload["contents"].append({"role": "model", "parts": parts})
+            payload["contents"].append({"role": "user", "parts": tool_results})
+
+        # If we exhausted iterations, make one final call without tools
+        payload_final = dict(payload)
+        payload_final.pop("tools", None)
+        payload_final.pop("tool_config", None)
+        resp = http_requests.post(url, json=payload_final, timeout=60)
         resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        final_parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        return " ".join(p.get("text", "") for p in final_parts if "text" in p).strip()
+
     except Exception as e:
         return f"Gemini API error: {str(e)}"
 
