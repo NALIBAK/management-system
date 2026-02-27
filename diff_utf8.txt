@@ -1,0 +1,66 @@
+﻿diff --git a/Main/Backend/app/routes/aira.py b/Main/Backend/app/routes/aira.py
+index c198246..ab73371 100644
+--- a/Main/Backend/app/routes/aira.py
++++ b/Main/Backend/app/routes/aira.py
+@@ -905,6 +905,61 @@ def _smart_fallback(message: str, user: dict) -> str:
+     msg = message.lower().strip()
+     
+     try:
++        # ===== PHASE 2 SMART FALLBACKS (Highest Priority) =====
++
++        # Navigate to page
++        if any(k in msg for k in ["take me to", "navigate to", "go to page", "open page"]):
++            result = _execute_navigate_to({"page": msg})
++            if result.get("response_type") == "navigate":
++                return result  # Returns dict ÔÇö handled by caller
++            return result.get("response", "ÔØô Page not found.")
++
++        # Generate PDF or Excel report
++        if any(k in msg for k in ["generate pdf", "generate excel", "generate report",
++                                   "create pdf", "create excel", "create report",
++                                   "export pdf", "export excel", "as pdf", "as excel"]):
++            fmt = "excel" if any(k in msg for k in ["excel", "xlsx"]) else "pdf"
++            rt = "attendance"
++            if any(k in msg for k in ["fee", "defaulter", "payment"]): rt = "fees"
++            elif any(k in msg for k in ["mark", "score", "exam"]): rt = "marks"
++            elif any(k in msg for k in ["scholarship"]): rt = "scholarship"
++            elif any(k in msg for k in ["eligib"]): rt = "eligibility"
++            elif any(k in msg for k in ["dept", "department"]): rt = "department"
++            elif any(k in msg for k in ["cgpa", "student", "profile"]): rt = "students"
++            try:
++                result = _execute_generate_report({"report_type": rt, "format": fmt}, user)
++                return result  # Returns dict ÔÇö handled by caller
++            except Exception as ex:
++                return f"ÔØî Could not generate report: {str(ex)}"
++
++        # List saved reports
++        if any(k in msg for k in ["my saved reports", "saved reports", "list reports", "my reports"]):
++            _clean_old_reports()
++            files = sorted(os.listdir(REPORTS_DIR), reverse=True)
++            files = [f for f in files if os.path.isfile(os.path.join(REPORTS_DIR, f))]
++            if not files:
++                return "­ƒôü **No saved reports yet.** Ask me to generate one ÔÇö e.g., *\"Generate fee defaulters as PDF\"*"
++            lines = []
++            for f in files[:20]:
++                stat = os.stat(os.path.join(REPORTS_DIR, f))
++                created = datetime.fromtimestamp(stat.st_mtime).strftime("%d %b %Y %H:%M")
++                size = round(stat.st_size/1024, 1)
++                ext_icon = "­ƒôä" if f.endswith(".pdf") else "­ƒôè"
++                lines.append(f"- {ext_icon} **{f}** ÔÇö {size} KB ÔÇö {created}")
++            return f"­ƒôü **Saved Reports** ({len(files)} files):\n\n" + "\n".join(lines) + \
++                   "\n\n> Click the links in the report cards above to preview or download."
++
++        # Bulk mark all students
++        if any(k in msg for k in ["mark all", "mark entire", "bulk mark", "attendance for all"]):
++            status = "A" if "absent" in msg else ("OD" if " od " in msg or "on duty" in msg else "P")
++            result = _execute_bulk_update_attendance({
++                "status": status,
++                "subject_name": "class",
++                "date": datetime.now().strftime("%Y-%m-%d")
++            })
++            return result  # Returns dict with bulk_confirm type ÔÇö handled by caller
++
++        # ===== NORMAL DATA QUERIES =====
+         # Student queries
+         if any(k in msg for k in ["how many student", "student count", "total student", "number of student"]):
+             result = query("SELECT COUNT(*) as count FROM student WHERE status='active'", fetchone=True)

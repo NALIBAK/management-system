@@ -129,12 +129,15 @@ It generates:
 - 1500 Students & 150 Staff
 - Attendance, Marks, Fees, Timetables, Scholarships, and more!
 
-Ensure XAMPP MySQL is running, then optionally simply run:
+Ensure XAMPP MySQL is running, then run:
 
 ```powershell
-# From the project root
-uv run python populate_db.py
+# Must run from Main/Backend so uv uses the correct .venv
+cd Main\Backend
+uv run python ..\..\populate_db.py
 ```
+
+> **Why not from the project root?** The `.venv` with all dependencies lives inside `Main/Backend/`. Running `uv run` from the project root creates a fresh empty environment and fails with `ModuleNotFoundError: No module named 'pymysql'`.
 
 ---
 
@@ -383,6 +386,94 @@ The following bugs were identified and resolved during initial setup:
 The app supports **dark and light themes** toggled via the 🌙/☀️ button in the header. Theme preference is saved in `localStorage`.
 
 CSS custom properties are defined in `assets/css/main.css` under `:root` (light) and `[data-theme="dark"]`.
+
+---
+
+## 🤖 Agent / Automation Notes
+
+> These notes are specifically for AI agents running this project. All three issues below caused failures in automated test runs.
+
+### ⚠️ 1. Starting the Frontend Server on Windows
+
+**Problem:** Running `python -m http.server 8000` as an inline background command in PowerShell can silently die due to keyboard-interrupt signals from the shell.
+
+**Fix — always use `Start-Process` to launch it in a separate process:**
+
+```powershell
+Start-Process -FilePath "python" -ArgumentList "-m", "http.server", "8000" `
+  -WorkingDirectory "C:\xampp\htdocs\management-system\Main\Frontend" `
+  -WindowStyle Normal
+```
+
+This keeps the server alive independently. Verify it's up by opening `http://localhost:8000/login.html`.
+
+---
+
+### ⚠️ 2. `DB_PASSWORD` in `.env` — No Inline Comments
+
+**Problem:** `python-dotenv` reads **everything after the `=`** as the value, including inline comments and trailing spaces:
+
+```env
+# ❌ WRONG — password will be "          # Leave blank..." (non-empty string)
+DB_PASSWORD=          # Leave blank for default XAMPP (no root password)
+```
+
+This causes `pymysql` to send a non-empty password to MySQL, resulting in:
+```
+OperationalError: (1045, "Access denied for user 'root'@'localhost' (using password: YES)")
+```
+Which then drops CORS headers on the 500 response, making browsers report a misleading CORS error.
+
+**Fix — blank value, nothing after the `=`:**
+
+```env
+# ✅ CORRECT
+DB_PASSWORD=
+```
+
+---
+
+### ⚠️ 3. Browser Navigation — Always Use the Full HTML Path
+
+**Problem:** Navigating to `http://localhost:8000` shows a **directory listing**, not the app. Clicking through the listing is unreliable and causes 404s.
+
+**Fix — always navigate directly to the login page:**
+
+```
+http://localhost:8000/login.html
+```
+
+For automated testing you can also bypass the login form entirely by injecting the JWT token via JavaScript console:
+
+```javascript
+fetch('http://localhost:5000/api/auth/login', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({username: 'superadmin', password: 'Admin@123'})
+}).then(r => r.json()).then(d => {
+  localStorage.setItem('auth_token', d.data.token);
+  window.location.href = '/dashboard.html';
+});
+```
+
+---
+
+### ⚠️ 4. Running `populate_db.py` — Use the Backend Directory
+
+**Problem:** `uv run python populate_db.py` from the project root fails with `ModuleNotFoundError: No module named 'pymysql'` because `uv` finds no `.venv` there and creates a fresh empty environment.
+
+**The `.venv` lives inside `Main/Backend/` — always run from there:**
+
+```powershell
+# ✅ CORRECT
+cd Main\Backend
+uv run python ..\..\populate_db.py
+```
+
+```powershell
+# ❌ WRONG — uv creates an empty env at project root
+uv run python populate_db.py
+```
 
 ---
 

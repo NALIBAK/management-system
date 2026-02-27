@@ -1,337 +1,548 @@
 /* ============================================================
-   AIRA Widget — Autonomous AI Research Assistant
+   AIRA — Persistent Side Panel (Phase 2)
+   College Management System
    ============================================================ */
 
-// Load marked.js for markdown rendering (if not already loaded)
-(function() {
-    if (typeof marked === 'undefined') {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/marked@9/marked.min.js';
-        s.onload = () => {
-            marked.setOptions({ breaks: true, gfm: true });
-        };
-        document.head.appendChild(s);
+(function () {
+    'use strict';
+
+    // ── Constants ──────────────────────────────────────────────
+    const DEFAULT_WIDTH = 480;
+    const MIN_WIDTH = 300;
+    const MAX_WIDTH = 720;
+    const LS_WIDTH = 'aira_panel_width';
+    const LS_OPEN = 'aira_panel_open';
+    const SS_PAGE = 'aira_last_page';
+    const SS_CONV = 'aira_conversation_id';
+
+    // ── Quick Action Chips ─────────────────────────────────────
+    const QUICK_CHIPS = [
+        { label: '📊 Dept Summary', q: 'Show department summary' },
+        { label: '🏆 Top CGPA', q: 'Show top 10 students by CGPA' },
+        { label: '⚠️ Low Attendance', q: 'Show students below 75% attendance' },
+        { label: '💰 Fee Defaulters', q: 'Show fee defaulters' },
+        { label: '📝 Marks Report', q: 'Show marks report' },
+        { label: '✅ Eligibility', q: 'Show eligibility report' },
+        { label: '🎓 Scholarship', q: 'Show scholarship report' },
+        { label: '🏆 Activities', q: 'Show extracurricular activities' },
+        { label: '🏫 Overview', q: 'Show college overview' },
+        { label: '📋 My Reports', q: 'Show my saved reports' },
+        { label: '📈 CGPA Report', q: 'Show CGPA report' },
+        { label: '🔍 Help', q: 'help' },
+    ];
+
+    // ── State ─────────────────────────────────────────────────
+    let conversationId = sessionStorage.getItem(SS_CONV) || null;
+    let isTyping = false;
+    let csvDetected = null;
+    let panelEl = null;
+    let messagesEl = null;
+    let mainContentEl = null;
+    let currentWidth = parseInt(localStorage.getItem(LS_WIDTH)) || DEFAULT_WIDTH;
+
+    // ── marked.js loader ──────────────────────────────────────
+    function loadMarked() {
+        return new Promise(resolve => {
+            if (window.marked) { resolve(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+            s.onload = resolve;
+            s.onerror = resolve; // fallback gracefully
+            document.head.appendChild(s);
+        });
     }
-})();
 
-const aira = {
-    conversationId: null,
-    isOpen: false,
-    isTyping: false,
+    function renderMd(text) {
+        if (!text) return '';
+        try {
+            if (window.marked) return marked.parse(String(text));
+        } catch (e) { }
+        return String(text).replace(/\n/g, '<br>');
+    }
 
-    _QUICK_ACTIONS: [
-        { label: '📊 Low Attendance',      prompt: 'Show students with attendance below 75%' },
-        { label: '💰 Fee Defaulters',       prompt: 'Show fee defaulters' },
-        { label: '🏫 Dept Summary',         prompt: 'Show department summary' },
-        { label: '📈 CGPA Report',          prompt: 'Show student CGPA report' },
-        { label: '🎯 Eligibility',          prompt: 'Show eligibility report' },
-        { label: '🏷️ Categories',          prompt: 'Show category wise report' },
-        { label: '🎓 Scholarships',         prompt: 'Show scholarship report' },
-        { label: '📝 Marks Report',         prompt: 'Show marks report' },
-        { label: '📅 Attendance Report',    prompt: 'Show attendance report' },
-        { label: '🏆 Top Students',         prompt: 'Show top 10 students by CGPA' },
-        { label: '💰 Fee Structure',        prompt: 'Show fee structure report' },
-        { label: '🔬 Activities',           prompt: 'Show extracurricular activities report' },
-    ],
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
-    init() {
-        this._inject();
-        this._bindEvents();
-        this._addWelcomeMessage();
-    },
+    // ── Page navigation map ───────────────────────────────────
+    const PAGE_MAP = {
+        'dashboard': '../dashboard.html',
+        'students': '../students/index.html',
+        'staff': '../staff/index.html',
+        'departments': '../departments/index.html',
+        'courses': '../courses/index.html',
+        'timetable': '../timetable/index.html',
+        'attendance': '../attendance/index.html',
+        'marks': '../marks/index.html',
+        'fees': '../fees/index.html',
+        'reports': '../reports/index.html',
+        'notifications': '../notifications/index.html',
+        'settings': '../settings/index.html',
+    };
 
-    _inject() {
-        const quickBtns = this._QUICK_ACTIONS.map(a =>
-            `<button class="aira-quick-btn" data-prompt="${a.prompt}">${a.label}</button>`
+    // ── Build panel HTML ──────────────────────────────────────
+    function buildPanel() {
+        const chips = QUICK_CHIPS.map(c =>
+            `<button class="aira-quick-chip" data-q="${escHtml(c.q)}">${c.label}</button>`
         ).join('');
 
-        const widget = document.createElement('div');
-        widget.className = 'aira-widget';
-        widget.id = 'aira-widget';
-        widget.innerHTML = `
-      <div class="aira-panel" id="aira-panel">
-        <div class="aira-panel-header">
-          <div class="aira-avatar">🤖</div>
-          <div class="aira-header-info">
-            <h4>AIRA <span style="font-size:10px;opacity:0.75;font-weight:400">Autonomous Agent</span></h4>
-            <span id="aira-status-line">AI Research Assistant • Database Connected</span>
+        return `
+    <div class="aira-resize-handle" id="aira-handle"></div>
+    <aside class="aira-side-panel" id="aira-panel">
+      <div class="aira-panel-header">
+        <div class="aira-panel-header-left">
+          <div class="aira-panel-avatar">🤖</div>
+          <div>
+            <div class="aira-panel-title">
+              AIRA <span class="aira-panel-badge">Autonomous Agent</span>
+            </div>
+            <div class="aira-panel-subtitle">AI Research Assistant • Database Connected</div>
           </div>
-          <button class="aira-close-btn" id="aira-close">✕</button>
         </div>
-        <div class="aira-quick-actions" id="aira-quick-actions">${quickBtns}</div>
-        <div class="aira-messages" id="aira-messages"></div>
-        <div class="aira-input-area">
-          <textarea class="aira-input" id="aira-input" placeholder="Ask AIRA anything about students, staff, fees, marks..." rows="1"></textarea>
-          <button class="aira-send-btn" id="aira-send" title="Send (Enter)">➤</button>
+        <div class="aira-panel-header-right">
+          <button class="aira-collapse-btn" id="aira-collapse" title="Collapse AIRA">◀</button>
         </div>
       </div>
-      <div class="aira-bubble" id="aira-bubble">
-        <div class="aira-pulse"></div>
-        <span class="aira-icon">🤖</span>
-      </div>`;
-        document.body.appendChild(widget);
-    },
 
-    _bindEvents() {
-        document.getElementById('aira-bubble').onclick = () => this.toggle();
-        document.getElementById('aira-close').onclick = () => this.close();
-        document.getElementById('aira-send').onclick = () => this._send();
+      <div class="aira-messages" id="aira-messages"></div>
 
-        const input = document.getElementById('aira-input');
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._send(); }
-        });
-        input.addEventListener('input', () => {
-            input.style.height = 'auto';
-            input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-        });
+      <div class="aira-quick-actions" id="aira-quick-actions">${chips}</div>
 
-        document.getElementById('aira-quick-actions').addEventListener('click', (e) => {
-            const btn = e.target.closest('.aira-quick-btn');
-            if (btn) {
-                document.getElementById('aira-input').value = btn.dataset.prompt;
-                this._send();
-            }
-        });
-    },
+      <div class="aira-input-area">
+        <div class="aira-csv-banner" id="aira-csv-banner" style="display:none">
+          📋 CSV detected — <strong>use this to upload marks?</strong>
+          <span id="aira-csv-dismiss" style="cursor:pointer;font-size:14px">✕</span>
+        </div>
+        <div class="aira-input-row">
+          <textarea
+            id="aira-input"
+            placeholder="Ask AIRA anything about students, staff, fees, marks..."
+            rows="1"
+          ></textarea>
+          <button id="aira-send" title="Send">➤</button>
+        </div>
+        <div class="aira-powered-by">AIRA • Role-based access • Powered by live database</div>
+      </div>
+    </aside>`;
+    }
 
-    toggle() { this.isOpen ? this.close() : this.open(); },
+    // ── Width & margin helpers ────────────────────────────────
+    function applyWidth(w, save) {
+        currentWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w));
+        if (panelEl) panelEl.style.width = currentWidth + 'px';
+        const handleEl = document.getElementById('aira-handle');
+        if (handleEl) handleEl.style.right = currentWidth + 'px';
+        if (mainContentEl && !panelEl.classList.contains('aira-panel-collapsed')) {
+            mainContentEl.style.marginRight = currentWidth + 'px';
+        }
+        if (save) localStorage.setItem(LS_WIDTH, currentWidth);
+    }
 
-    open() {
-        this.isOpen = true;
-        document.getElementById('aira-panel').classList.add('open');
-        document.getElementById('aira-input').focus();
-    },
+    function openPanel() {
+        panelEl.classList.remove('aira-panel-collapsed');
+        const handle = document.getElementById('aira-handle');
+        if (handle) handle.style.display = '';
+        if (mainContentEl) mainContentEl.style.marginRight = currentWidth + 'px';
+        const toggleBtn = document.getElementById('aira-toggle');
+        if (toggleBtn) toggleBtn.classList.remove('panel-closed');
+        localStorage.setItem(LS_OPEN, 'true');
+        scrollBottom();
+    }
 
-    close() {
-        this.isOpen = false;
-        document.getElementById('aira-panel').classList.remove('open');
-    },
+    function closePanel() {
+        panelEl.classList.add('aira-panel-collapsed');
+        const handle = document.getElementById('aira-handle');
+        if (handle) handle.style.display = 'none';
+        if (mainContentEl) mainContentEl.style.marginRight = '0';
+        const toggleBtn = document.getElementById('aira-toggle');
+        if (toggleBtn) toggleBtn.classList.add('panel-closed');
+        localStorage.setItem(LS_OPEN, 'false');
+    }
 
-    _addWelcomeMessage() {
-        const user = auth.getUser();
-        const name = user ? (user.username || 'there') : 'there';
-        this._appendMessage('aira', `## 👋 Hi ${name}! I'm AIRA
+    function scrollBottom() {
+        if (messagesEl) setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 60);
+    }
 
-I'm an **autonomous AI agent** connected to your college database. I can:
+    // ── History Persistence ───────────────────────────────────
+    const SS_HISTORY = 'aira_html_history';
+    function saveHistory() {
+        if (messagesEl) sessionStorage.setItem(SS_HISTORY, messagesEl.innerHTML);
+    }
 
-- 📊 **Query & report** — students, staff, attendance, marks, fees
-- 🔍 **Analyze data** — find top students, defaulters, low attendance
-- 📋 **Generate tables** — formatted reports from live DB
-- ✏️ **Write actions** — mark attendance (with confirmation)
-
-> 💡 Use the quick buttons above or ask me anything in natural language!`);
-    },
-
-    _renderMarkdown(text) {
-        try {
-            if (typeof marked !== 'undefined') {
-                return marked.parse(text);
-            }
-        } catch(e) {}
-        // Fallback: basic formatting
-        return text
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g,'<em>$1</em>')
-            .replace(/`(.+?)`/g,'<code>$1</code>')
-            .replace(/\n/g,'<br>');
-    },
-
-    _appendMessage(role, content, opts = {}) {
-        const container = document.getElementById('aira-messages');
-        const isUser = role === 'user';
-        const initials = isUser ? (auth.getUserInitials() || 'U') : '🤖';
+    // ── Message renderers ─────────────────────────────────────
+    function appendUserMsg(text) {
+        const user = (typeof auth !== 'undefined') ? auth.getUser() : null;
+        const initials = user?.username?.slice(0, 2).toUpperCase() || 'U';
         const div = document.createElement('div');
-        div.className = `aira-msg ${role}`;
-
-        const rendered = isUser
-            ? `<span>${content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`
-            : this._renderMarkdown(content);
-
-        const copyBtn = (!isUser && content.length > 200)
-            ? `<button class="aira-copy-btn" onclick="aira._copy(this)">📋 Copy</button>`
-            : '';
-
+        div.className = 'aira-msg user';
         div.innerHTML = `
-      <div class="aira-msg-avatar">${initials}</div>
-      <div class="aira-msg-bubble">${rendered}${copyBtn}</div>`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
+      <div class="aira-msg-avatar">${escHtml(initials)}</div>
+      <div class="aira-msg-content">
+        <div class="aira-bubble">${escHtml(text)}</div>
+      </div>`;
+        messagesEl.appendChild(div);
+        scrollBottom();
+        saveHistory();
+        // hide chips after first send
+        const qa = document.getElementById('aira-quick-actions');
+        if (qa) qa.style.display = 'none';
+    }
+
+    function appendAiraMsg(text, extraHtml) {
+        const div = document.createElement('div');
+        div.className = 'aira-msg aira';
+        const rendered = renderMd(text);
+        const showCopy = text.length > 200;
+        div.innerHTML = `
+      <div class="aira-msg-avatar">🤖</div>
+      <div class="aira-msg-content">
+        <div class="aira-bubble" data-raw="${escHtml(text)}">${rendered}</div>
+        ${extraHtml || ''}
+        ${showCopy ? '<button class="aira-copy-btn">📋 Copy</button>' : ''}
+      </div>`;
+        messagesEl.appendChild(div);
+        scrollBottom();
+        saveHistory();
         return div;
-    },
+    }
 
-    _copy(btn) {
-        const bubble = btn.closest('.aira-msg-bubble');
-        const text = bubble.innerText.replace('📋 Copy','').trim();
-        navigator.clipboard.writeText(text).then(() => {
-            btn.textContent = '✅ Copied!';
-            setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
-        });
-    },
+    function appendPageSep(pageName) {
+        const sep = document.createElement('div');
+        sep.className = 'aira-page-sep';
+        sep.textContent = `Now on: ${pageName}`;
+        messagesEl.appendChild(sep);
+        scrollBottom();
+        saveHistory();
+    }
 
-    _showTyping() {
-        const container = document.getElementById('aira-messages');
+    function showTypingIndicator() {
         const div = document.createElement('div');
         div.className = 'aira-msg aira';
-        div.id = 'aira-typing-indicator';
+        div.id = 'aira-typing';
         div.innerHTML = `
       <div class="aira-msg-avatar">🤖</div>
-      <div class="aira-typing"><span></span><span></span><span></span></div>`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    },
-
-    _hideTyping() {
-        document.getElementById('aira-typing-indicator')?.remove();
-    },
-
-    _showToolStatus(toolName) {
-        const container = document.getElementById('aira-messages');
-        const div = document.createElement('div');
-        div.className = 'aira-msg aira';
-        div.id = 'aira-tool-status';
-        const labels = {
-            get_student_info: 'Looking up student info',
-            get_attendance_summary: 'Fetching attendance data',
-            get_marks: 'Loading marks records',
-            get_fee_balance: 'Checking fee balance',
-            get_department_summary: 'Fetching department stats',
-            get_top_students: 'Finding top students',
-            get_low_attendance: 'Scanning attendance records',
-            get_fee_defaulters: 'Checking fee payments',
-            get_staff_by_department: 'Loading staff list',
-            generate_attendance_report: 'Generating attendance report',
-            generate_marks_report: 'Generating marks report',
-            generate_student_profile_report: 'Building student profiles',
-            generate_fee_structure_report: 'Loading fee structures',
-            generate_eligibility_report: 'Evaluating eligibility',
-            generate_category_wise_report: 'Building category report',
-            generate_scholarship_report: 'Fetching scholarship data',
-            generate_extracurricular_report: 'Loading activity records',
-        };
-        const label = labels[toolName] || `Running: ${toolName}`;
-        div.innerHTML = `
-      <div class="aira-msg-avatar">🤖</div>
-      <div style="display:flex;align-items:center;gap:0">
-        <div class="aira-tool-status">
-          <div class="tool-spinner"></div>
-          🔧 ${label}…
-        </div>
+      <div class="aira-msg-content">
+        <div class="aira-typing"><span></span><span></span><span></span></div>
       </div>`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    },
+        messagesEl.appendChild(div);
+        scrollBottom();
+    }
 
-    _hideToolStatus() {
-        document.getElementById('aira-tool-status')?.remove();
-    },
+    function hideTypingIndicator() {
+        document.getElementById('aira-typing')?.remove();
+    }
 
-    async _send() {
-        const input = document.getElementById('aira-input');
-        const message = input.value.trim();
-        if (!message || this.isTyping) return;
-
-        input.value = '';
-        input.style.height = 'auto';
-        this._appendMessage('user', message);
-        this._showTyping();
-        this.isTyping = true;
-        document.getElementById('aira-send').disabled = true;
-
-        // Hide quick actions after first message
-        document.getElementById('aira-quick-actions').style.display = 'none';
-
-        try {
-            const pageContext = window.location.pathname;
-            const res = await api.post('/aira/chat', {
-                message,
-                conversation_id: this.conversationId,
-                page_context: pageContext
-            });
-
-            this._hideTyping();
-            if (res && res.data) {
-                this.conversationId = res.data.data?.conversation_id || this.conversationId;
-                const reply = res.data.data?.response || res.data.message || 'Sorry, I could not process that.';
-
-                // Show tool calls made (if any)
-                const toolCalls = res.data.data?.tool_calls || [];
-                toolCalls.forEach(tc => {
-                    if (tc && tc.name) this._showToolStatus(tc.name);
-                    setTimeout(() => this._hideToolStatus(), 1200);
+    // ── Global event delegation for messages ──────────────────
+    function setupMessageDelegation() {
+        messagesEl.addEventListener('click', e => {
+            if (e.target.classList.contains('aira-copy-btn')) {
+                const btn = e.target;
+                const bubble = btn.parentElement.querySelector('.aira-bubble');
+                const text = bubble ? (bubble.getAttribute('data-raw') || bubble.innerText) : '';
+                navigator.clipboard?.writeText(text).then(() => {
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
                 });
-
-                if (res.data.data?.needs_confirmation) {
-                    this._appendConfirmation(
-                        res.data.data.preview || reply,
-                        res.data.data.action_id
-                    );
-                } else {
-                    this._appendMessage('aira', reply);
-                }
-            } else {
-                this._appendMessage('aira', '⚠️ Could not connect to AIRA. Please check if the backend is running.');
             }
-        } catch (err) {
-            this._hideTyping();
-            this._appendMessage('aira', '⚠️ An error occurred. Please try again.');
-        } finally {
-            this.isTyping = false;
-            document.getElementById('aira-send').disabled = false;
-        }
-    },
+        });
+    }
 
-    _appendConfirmation(preview, actionId) {
-        const container = document.getElementById('aira-messages');
-        const div = document.createElement('div');
-        div.className = 'aira-msg aira';
-        div.innerHTML = `
-      <div class="aira-msg-avatar">🤖</div>
-      <div class="aira-msg-bubble">
-        <div class="aira-confirm-card">
-          <p><strong>⚠️ Confirm Action</strong></p>
-          <p>${this._renderMarkdown(preview)}</p>
-          <div class="aira-confirm-actions" id="confirm-${actionId}">
-            <button class="btn btn-primary btn-sm aira-confirm-yes" onclick="aira._handleConfirm(${actionId})">✅ Confirm</button>
-            <button class="btn btn-ghost btn-sm aira-confirm-no" onclick="aira._handleCancel(${actionId})">❌ Cancel</button>
-          </div>
+    // ── Card builders ─────────────────────────────────────────
+    function reportCard(data) {
+        const icon = (data.format || '').toLowerCase() === 'excel' ? '📊' : '📄';
+        return `
+      <div class="aira-card">
+        <div class="aira-card-title">${icon} ${escHtml(data.filename || 'report')}</div>
+        <div class="aira-card-meta">Generated ${new Date().toLocaleDateString()}</div>
+        <div class="aira-card-actions">
+          <a href="${escHtml(data.preview_url)}" target="_blank" class="aira-card-btn">👁 Preview</a>
+          <a href="${escHtml(data.download_url)}" download="${escHtml(data.filename)}" class="aira-card-btn primary">⬇ Download</a>
         </div>
       </div>`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    },
+    }
 
-    async _handleConfirm(actionId) {
-        const container = document.getElementById(`confirm-${actionId}`);
-        if (container) container.innerHTML = '<em>Processing...</em>';
+    function navCard(data) {
+        return `
+      <div class="aira-card">
+        <div class="aira-card-title">📍 ${escHtml(data.label || data.page)}</div>
+        <div class="aira-card-actions">
+          <a href="${escHtml(data.url)}" target="_blank" class="aira-card-btn">🔗 Open Page</a>
+          <a href="${escHtml(data.url)}" class="aira-card-btn primary">Take me there →</a>
+        </div>
+      </div>`;
+    }
+
+    function bulkCard(data, uid) {
+        const studentRows = (data.students || [])
+            .map(s => `<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:11px">
+        ${escHtml(s.name)} <span style="color:var(--text-muted)">(${escHtml(s.reg_no || '')})</span>
+      </div>`).join('');
+        return `
+      <div class="aira-card" id="bulk-${uid}">
+        <div class="aira-card-title">⚠️ ${escHtml(data.action_description || 'Bulk operation')}</div>
+        <div class="aira-card-meta">Affects <strong>${data.count || 0}</strong> students</div>
+        ${studentRows ? `<details style="margin-bottom:8px">
+          <summary style="cursor:pointer;font-size:12px;color:var(--accent);font-weight:600;list-style:none">
+            ▶ Show student list
+          </summary>
+          <div style="margin-top:6px;max-height:140px;overflow-y:auto">${studentRows}</div>
+        </details>` : ''}
+        <div class="aira-card-actions">
+          <button class="aira-card-btn" onclick="document.getElementById('bulk-${uid}').remove()">✕ Cancel</button>
+          <button class="aira-card-btn primary" id="bulk-confirm-${uid}" onclick="window._airaBulkConfirm('${uid}', '${escHtml(data.action_id || '')}')">✅ Confirm</button>
+        </div>
+      </div>`;
+    }
+
+    window._airaBulkConfirm = async function (uid, actionId) {
+        const btn = document.getElementById('bulk-confirm-' + uid);
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing...'; }
         try {
-            const res = await api.post('/aira/confirm-action', { action_id: actionId });
-            if (container) {
-                container.innerHTML = res?.data?.message
-                    ? `<span style="color:var(--success-color)">✅ ${res.data.message}</span>`
-                    : '<span style="color:var(--success-color)">✅ Action completed!</span>';
-            }
-        } catch (err) {
-            if (container) container.innerHTML = '<span style="color:var(--danger-color)">❌ Failed to execute action</span>';
+            const res = await window.api.post('/aira/execute-tool', { tool: 'bulk_execute', params: { action_id: actionId } });
+            if (!res.ok) throw new Error(res.data?.message || 'Error executing tool');
+            document.getElementById('bulk-' + uid)?.remove();
+            appendAiraMsg(res.data?.data?.message || '✅ Bulk operation completed.');
+        } catch (e) {
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Confirm'; }
+            appendAiraMsg('❌ Bulk operation failed. Please try again.');
         }
-    },
+    };
 
-    async _handleCancel(actionId) {
-        const container = document.getElementById(`confirm-${actionId}`);
-        if (container) container.innerHTML = '<em>Cancelling...</em>';
+    // ── Send message ──────────────────────────────────────────
+    async function sendMessage() {
+        const inputEl = document.getElementById('aira-input');
+        const sendBtn = document.getElementById('aira-send');
+        const text = inputEl.value.trim();
+        if (!text || isTyping) return;
+
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        csvDetected = null;
+        document.getElementById('aira-csv-banner').style.display = 'none';
+
+        appendUserMsg(text);
+        isTyping = true;
+        sendBtn.disabled = true;
+        showTypingIndicator();
+
         try {
-            await api.post('/aira/cancel-action', { action_id: actionId });
-            if (container) container.innerHTML = '<span style="color:var(--text-muted)">🚫 Action cancelled</span>';
+            const pageName = document.title.replace(/—.*/, '').trim();
+            const payload = {
+                message: text,
+                conversation_id: conversationId,
+                page_context: pageName,
+            };
+            if (csvDetected) payload.csv_data = csvDetected;
+
+            const res = await window.api.post('/aira/chat', payload);
+            hideTypingIndicator();
+
+            if (!res.ok) throw new Error(res.data?.message || 'Error from server');
+
+            const data = res.data.data || {};
+            if (data.conversation_id) {
+                conversationId = data.conversation_id;
+                sessionStorage.setItem(SS_CONV, conversationId);
+            }
+
+            // Determine extra card HTML
+            let cardHtml = '';
+            const rt = data.response_type || data.type;
+            if (rt === 'report' && data.filename) cardHtml = reportCard(data);
+            else if (rt === 'navigate' && data.url) cardHtml = navCard(data);
+            else if (rt === 'bulk_confirm') cardHtml = bulkCard(data, Date.now());
+
+            appendAiraMsg(data.response || data.message || 'Done.', cardHtml);
+
         } catch (err) {
-            if (container) container.innerHTML = '<span style="color:var(--danger-color)">❌ Failed to cancel</span>';
+            hideTypingIndicator();
+            appendAiraMsg('❌ Something went wrong. Check your connection and try again.\n\n`' + (err.message || 'Unknown error') + '`');
+        } finally {
+            isTyping = false;
+            sendBtn.disabled = false;
         }
     }
-};
 
-// Auto-init when DOM is ready (only if logged in)
-document.addEventListener('DOMContentLoaded', () => {
-    if (auth.isLoggedIn()) aira.init();
-});
+    // ── Main init ─────────────────────────────────────────────
+    async function init() {
+        // Only inject on pages that have .app-layout (i.e. not login.html)
+        const layout = document.querySelector('.app-layout');
+        if (!layout) return;
 
-window.aira = aira;
+        await loadMarked();
+
+        // Inject panel HTML
+        layout.insertAdjacentHTML('beforeend', buildPanel());
+        panelEl = document.getElementById('aira-panel');
+        messagesEl = document.getElementById('aira-messages');
+        mainContentEl = document.querySelector('.main-content');
+
+        // Inject AIRA toggle button into nav header-actions
+        const headerActions = document.querySelector('.header-actions');
+        if (headerActions) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-aira-toggle';
+            btn.id = 'aira-toggle';
+            btn.title = 'Toggle AIRA Panel';
+            btn.innerHTML = '🤖 AIRA';
+            headerActions.insertBefore(btn, headerActions.firstChild);
+        }
+
+        // Apply saved width
+        applyWidth(currentWidth, false);
+
+        // Apply saved open state (default open)
+        const savedOpen = localStorage.getItem(LS_OPEN);
+        if (savedOpen === 'false') {
+            closePanel();
+        } else {
+            openPanel();
+        }
+
+        // ── Resize drag ────────────────────────────────────────
+        const handleEl = document.getElementById('aira-handle');
+        let dragging = false, startX, startW;
+
+        handleEl.addEventListener('mousedown', e => {
+            dragging = true;
+            startX = e.clientX;
+            startW = currentWidth;
+            handleEl.classList.add('dragging');
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const delta = startX - e.clientX;
+            applyWidth(startW + delta, false);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false;
+            handleEl.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            applyWidth(currentWidth, true); // save
+        });
+
+        // ── Collapse / Expand ──────────────────────────────────
+        document.getElementById('aira-collapse').addEventListener('click', () => {
+            if (panelEl.classList.contains('aira-panel-collapsed')) openPanel();
+            else closePanel();
+        });
+
+        document.getElementById('aira-toggle')?.addEventListener('click', () => {
+            if (panelEl.classList.contains('aira-panel-collapsed')) openPanel();
+            else closePanel();
+        });
+
+        // ── Restore History ────────────────────────────────────
+        const savedHistory = sessionStorage.getItem(SS_HISTORY);
+        if (savedHistory) {
+            messagesEl.innerHTML = savedHistory;
+            setupMessageDelegation();
+        }
+
+        // ── Page separator ─────────────────────────────────────
+        const lastPage = sessionStorage.getItem(SS_PAGE);
+        const currentPage = document.title.replace(/—.*/, '').trim();
+        if (lastPage && lastPage !== currentPage && messagesEl.children.length > 0) {
+            appendPageSep(currentPage);
+        }
+        sessionStorage.setItem(SS_PAGE, currentPage);
+
+        // ── Welcome message ────────────────────────────────────
+        if (messagesEl.children.length === 0) {
+            appendAiraMsg(
+                `👋 **Welcome to AIRA** — your autonomous AI assistant!
+
+I have **full access** to the college database and can:
+- 📊 **Reports**: attendance, marks, fees, CGPA, eligibility, scholarships
+- 🏆 **Rankings**: top students by CGPA, low attendance alerts
+- 📄 **Export**: generate PDF or Excel reports directly from chat
+- 🧭 **Navigate**: take you to any page in the system
+- 📋 **Bulk ops**: mark entire sections present/absent with confirmation
+- 🔍 **Search**: find any student, staff, or department instantly
+
+Type **help** to see all commands or click a quick action above.`
+            );
+        }
+
+        // ── Input handlers ─────────────────────────────────────
+        const inputEl = document.getElementById('aira-input');
+        const sendBtn = document.getElementById('aira-send');
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        // Auto-resize + CSV detection
+        inputEl.addEventListener('input', () => {
+            inputEl.style.height = 'auto';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+
+            const val = inputEl.value;
+            const lines = val.trim().split('\n');
+            const looksLikeCsv = lines.length > 1 &&
+                lines[0].includes(',') && lines[0].split(',').length >= 2;
+            if (looksLikeCsv) {
+                csvDetected = val;
+                document.getElementById('aira-csv-banner').style.display = 'flex';
+            } else {
+                csvDetected = null;
+                document.getElementById('aira-csv-banner').style.display = 'none';
+            }
+        });
+
+        document.getElementById('aira-csv-dismiss').addEventListener('click', () => {
+            csvDetected = null;
+            document.getElementById('aira-csv-banner').style.display = 'none';
+        });
+
+        // ── Quick chips ────────────────────────────────────────
+        document.querySelectorAll('.aira-quick-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                inputEl.value = chip.dataset.q;
+                sendMessage();
+            });
+        });
+
+        // ── Mobile: auto-hide below 768px ─────────────────────
+        function checkMobile() {
+            if (window.innerWidth < 768) {
+                panelEl.classList.remove('mobile-visible');
+                if (mainContentEl) mainContentEl.style.marginRight = '0';
+                handleEl.style.display = 'none';
+            } else {
+                handleEl.style.display = '';
+                // restore desktop state
+                if (!panelEl.classList.contains('aira-panel-collapsed') && mainContentEl) {
+                    mainContentEl.style.marginRight = currentWidth + 'px';
+                }
+            }
+        }
+        window.addEventListener('resize', checkMobile);
+        checkMobile();
+
+        // Mobile toggle via nav button
+        document.getElementById('aira-toggle')?.addEventListener('click', () => {
+            if (window.innerWidth < 768) {
+                panelEl.classList.toggle('mobile-visible');
+            }
+        }, true); // true = capture phase so this runs first
+    }
+
+    // Run after DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
