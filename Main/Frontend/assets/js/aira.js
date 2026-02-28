@@ -252,13 +252,14 @@
     // ── Card builders ─────────────────────────────────────────
     function reportCard(data) {
         const icon = (data.format || '').toLowerCase() === 'excel' ? '📊' : '📄';
+        const baseUrl = 'http://localhost:5000';
         return `
       <div class="aira-card">
         <div class="aira-card-title">${icon} ${escHtml(data.filename || 'report')}</div>
         <div class="aira-card-meta">Generated ${new Date().toLocaleDateString()}</div>
         <div class="aira-card-actions">
-          <a href="${escHtml(data.preview_url)}" target="_blank" class="aira-card-btn">👁 Preview</a>
-          <a href="${escHtml(data.download_url)}" download="${escHtml(data.filename)}" class="aira-card-btn primary">⬇ Download</a>
+          <a href="${baseUrl}${escHtml(data.preview_url)}" target="_blank" class="aira-card-btn">👁 Preview</a>
+          <a href="${baseUrl}${escHtml(data.download_url)}" download="${escHtml(data.filename)}" class="aira-card-btn primary">⬇ Download</a>
         </div>
       </div>`;
     }
