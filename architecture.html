@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Management System Architecture</title>
+    <style>
+        :root {
+            --orange: #ff8c00;
+            --orange-glow: rgba(255, 140, 0, 0.6);
+            --green: #00fa9a;
+            --green-glow: rgba(0, 250, 154, 0.6);
+            --bg-color: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding: 2rem;
+        }
+
+        /* Background Orbs for Glassmorphism Effect */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.7;
+            animation: float 20s infinite alternate ease-in-out;
+        }
+
+        .orb-orange {
+            width: 50vw;
+            height: 50vw;
+            background: var(--orange-glow);
+            top: -10%;
+            left: -10%;
+        }
+
+        .orb-green {
+            width: 40vw;
+            height: 40vw;
+            background: var(--green-glow);
+            bottom: -10%;
+            right: -10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(10%, 15%) scale(1.2); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, var(--orange), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Glassmorphism Accordion */
+        .accordion {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .accordion-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .accordion-item:hover {
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .accordion-header {
+            width: 100%;
+            padding: 1.5rem 2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .accordion-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .icon {
+            font-size: 1.5rem;
+            color: var(--orange);
+            transition: transform 0.3s ease;
+            text-shadow: 0 0 10px var(--orange-glow);
+        }
+
+        .accordion-header.active .icon {
+            transform: rotate(45deg);
+            color: var(--green);
+            text-shadow: 0 0 10px var(--green-glow);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .content-inner {
+            padding: 2rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* ASCII Art Styling */
+        pre {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            color: #a7f3d0; /* Soft green tint for code */
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* Custom Scrollbar for Pre */
+        pre::-webkit-scrollbar {
+            height: 8px;
+        }
+        pre::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        pre::-webkit-scrollbar-thumb {
+            background: var(--orange);
+            border-radius: 4px;
+        }
+        pre::-webkit-scrollbar-thumb:hover {
+            background: var(--green);
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text-main);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--orange);
+            font-weight: 600;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--green);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="orb orb-orange"></div>
+    <div class="orb orb-green"></div>
+
+    <div class="container">
+        <h1>College Management System Architecture</h1>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>📐 College Management System - Architecture Diagram</span>
+                    <span class="icon">+</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                  USER LAYER                                      │
+│                        (Client Browser / Web Interface)                          │
+└──────────────────────────────────┬──────────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+                    ▼                             ▼
+        ┌──────────────────────┐    ┌──────────────────────┐
+        │   LOGIN PAGE         │    │   THEME TOGGLE       │
+        │   (login.html)       │    │   (Dark/Light)       │
+        └──────────────────────┘    └──────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          FRONTEND LAYER (HTML/CSS/JS)                           │
+│                       Main/Frontend/ Directory Structure                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  ┌─ Dashboard (dashboard.html)                                                   │
+│  ├─ Students Module (students/index.html + add.html)                             │
+│  ├─ Staff Module (staff/index.html + add.html)                                   │
+│  ├─ Departments Module (departments/index.html)                                  │
+│  ├─ Courses Module (courses/index.html)                                          │
+│  ├─ Timetable Module (timetable/index.html)                                      │
+│  ├─ Attendance Module (attendance/index.html)                                    │
+│  ├─ Marks & Results (marks/index.html)                                           │
+│  ├─ Fees Module (fees/index.html)                                               │
+│  ├─ Reports Module (reports/index.html)                                          │
+│  ├─ Notifications (notifications/index.html)                                     │
+│  ├─ Settings (settings/index.html) → LLM Config                                  │
+│  │                                                                                │
+│  └─ Shared Assets                                                                │
+│     ├─ CSS: main.css (design system) + aira.css (AI widget)                     │
+│     ├─ JS Client Libraries:                                                      │
+│     │  ├─ api.js (HTTP client, auto-JWT injection)                              │
+│     │  ├─ auth.js (JWT management, auth checks)                                 │
+│     │  ├─ theme.js (Dark/light theme toggle)                                    │
+│     │  ├─ utils.js (Shared utilities)                                           │
+│     │  ├─ sidebar.js (Navigation renderer)                                      │
+│     │  └─ aira.js (AI chat widget with 7 quick actions)                        │
+│                                                                                   │
+└─────────────────────────────────────┬───────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    │                                   │
+                    ▼                                   ▼
+           ┌─────────────────┐              ┌───────────────────────┐
+           │  HTTP Client    │              │  JWT Token Storage    │
+           │  (Fetch API)    │              │  (localStorage)       │
+           │  Port: 8000     │              │                       │
+           └────────┬────────┘              └───────────────────────┘
+                    │
+                    └─────────────┬──────────────────┘
+                                  │
+                    ┌─────────────▼──────────────┐
+                    │  REST API Calls (JSON)     │
+                    │  http://localhost:5000     │
+                    │        /api/* │
+                    └──────────────┬──────────────┘
+                                   │
+┌──────────────────────────────────▼──────────────────────────────────────────────┐
+│                           BACKEND LAYER (Flask + Python)                        │
+│                         Main/Backend/ Directory Structure                       │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  ┌─ run.py (Flask App Entry Point, Port 5000)                                   │
+│  ├─ config.py (Environment variables, CORS config)                              │
+│  │                                                                                │
+│  ├─ app/__init__.py (Flask App Factory)                                         │
+│  │  ├─ CORS Initialization                                                       │
+│  │  ├─ Blueprint Registration                                                    │
+│  │  └─ strict_slashes=False                                                      │
+│  │                                                                                │
+│  ├─ app/db.py (Database Connection Pool - PyMySQL)                              │
+│  │  ├─ query() method (SELECT with fetchone/fetchall)                           │
+│  │  └─ execute() method (INSERT/UPDATE/DELETE)                                  │
+│  │                                                                                │
+│  ├─ app/utils/                                                                   │
+│  │  ├─ auth.py (bcrypt hashing, JWT creation/verification, decorators)          │
+│  │  └─ response.py (Standard JSON response helpers, serializers)                 │
+│  │                                                                                │
+│  └─ app/routes/ (12 Module Blueprints - One file per module)                    │
+│     ├─ auth.py (POST /login, /change-password)                                  │
+│     ├─ college.py (College CRUD, departments, academic years)                   │
+│     ├─ courses.py (Courses CRUD, subjects, semesters)                           │
+│     ├─ students.py (Student CRUD, category, caste/community)                    │
+│     ├─ staff.py (Staff CRUD, subject allocations)                               │
+│     ├─ timetable.py (Timetable CRUD, periods, rooms)                            │
+│     ├─ marks.py (Exams, bulk entry, semester results, GPA/CGPA)                 │
+│     ├─ attendance.py (Bulk attendance, summary tracking)                         │
+│     ├─ fees.py (Fee structures, payments, scholarships)                         │
+│     ├─ reports.py (12 Report Endpoints - See below)                             │
+│     ├─ aira.py (AI Assistant: MCP tools, Ollama/Gemini bridge)                 │
+│     └─ notifications.py (Parent notifications: email/SMS/WhatsApp)              │
+│                                                                                   │
+└──────────────────────────────────┬───────────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+                    ▼                             ▼
+┌─────────────────────────────────┐    ┌──────────────────────────┐
+│    DATABASE LAYER               │    │   AI INTEGRATION LAYER   │
+│    (MySQL via XAMPP)            │    │                          │
+├─────────────────────────────────┤    ├──────────────────────────┤
+│                                 │    │                          │
+│  38 Tables:                     │    │  ┌─ Ollama (Local)       │
+│  ├─ Core Data                   │    │  │  Port: 11434          │
+│  │  ├─ college                  │    │  │  Models: gemma3:1b    │
+│  │  ├─ academic_year            │    │  │                       │
+│  │  ├─ department               │    │  ├─ Google Gemini (Cloud)
+│  │  ├─ course                   │    │  │  API-based            │
+│  │  ├─ semester                 │    │  │  Models: gemini-1.5   │
+│  │  ├─ subject                  │    │  │                       │
+│  │  ├─ batch                    │    │  └─ LLM Config Table    │
+│  │  └─ section                  │    │     (per college)        │
+│  │                              │    │                          │
+│  ├─ Academic Data               │    │  14 MCP Tools:           │
+│  │  ├─ student                  │    │  ├─ get_students        │
+│  │  ├─ staff                    │    │  ├─ get_attendance      │
+│  │  ├─ subject_allocation       │    │  ├─ get_marks           │
+│  │  └─ user_account             │    │  ├─ generate_report     │
+│  │                              │    │  └─ ... (10 more)       │
+│  ├─ Operations Data             │    │                          │
+│  │  ├─ attendance               │    │  Smart Fallback:        │
+│  │  ├─ mark                     │    │  ├─ Built-in Query Handlers
+│  │  ├─ timetable                │    │  ├─ No LLM Required     │
+│  │  ├─ room                     │    │  └─ Common Report Queries
+│  │  └─ period_definition        │    │                          │
+│  │                              │    │  DB Context Injection:   │
+│  ├─ Administration              │    │  └─ Live Data Queries   │
+│  │  ├─ fee_structure            │    │                          │
+│  │  ├─ fee_payment              │    └──────────────────────────┘
+│  │  ├─ scholarship              │
+│  │  ├─ activity_log             │
+│  │  └─ role                     │
+│  │                              │
+│  ├─ AI & Notifications          │
+│  │  ├─ aira_conversation        │
+│  │  ├─ aira_message             │
+│  │  ├─ aira_action_log          │
+│  │  ├─ llm_config               │
+│  │  ├─ notification_template    │
+│  │  └─ notification_log         │
+│  │                              │
+│  ├─ Academic Enhancements       │
+│  │  ├─ extracurricular_activity │
+│  │  ├─ eligibility_criteria     │
+│  │  ├─ student_eligibility      │
+│  │  ├─ grade_mapping            │
+│  │  └─ semester_result          │
+│  │                              │
+│  └─ Authentication              │
+│     └─ role (super_admin,       │
+│        admin, hod, staff)       │
+│                                 │
+│  Port: 3306 (Default)           │
+│  Character Set: utf8mb4         │
+└─────────────────────────────────┘
+</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>📊 Module Architecture - Reports & AIRA Flow</span>
+                    <span class="icon">+</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        REPORTS MODULE (12 Types)                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Original Reports (4)          │  New Reports (8)                       │
+│  ──────────────────────────    │  ────────────────────                 │
+│  ✓ Attendance Defaulters      │  ✓ Student Profile / CGPA             │
+│  ✓ Marks Summary              │  ✓ Fee Structure                       │
+│  ✓ Fee Defaulters             │  ✓ Eligibility Criteria               │
+│  ✓ Department Summary          │  ✓ Category-wise                      │
+│                               │  ✓ Scholarship                        │
+│                               │  ✓ Extracurricular                    │
+│                               │  ✓ Attendance Detailed                │
+│                               │  ✓ Marks Detailed                     │
+│                                                                          │
+│  All Reports:                                                           │
+│  ├─ Query Parameter Filters Support                                    │
+│  ├─ CSV Export                                                          │
+│  └─ Accessible via Reports Page UI + AIRA Chatbot                      │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    AIRA (AI Research Assistant) Flow                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  User Query (Chat Widget) → Backend /api/aira/chat                      │
+│                             ↓                                           │
+│                   ┌─────────────────────────────┐                      │
+│                   │  Natural Language Processing │                      │
+│                   │  (Query Intent Detection)    │                      │
+│                   └─────────────────────────────┘                      │
+│                             ↓                                           │
+│              ┌──────────────┴───────────────────┐                      │
+│              │                                  │                      │
+│              ▼                                  ▼                       │
+│   ┌──────────────────────┐          ┌──────────────────────┐          │
+│   │ Built-in Handlers    │          │   AI Mode (LLM)      │          │
+│   │ (No LLM Required)    │          │ Ollama or Gemini     │          │
+│   ├──────────────────────┤          ├──────────────────────┤          │
+│   │ • Student queries    │          │ • Complex analysis   │          │
+│   │ • Staff queries      │          │ • Custom questions   │          │
+│   │ • Report generation  │          │ • Data interpretation│          │
+│   │ • Fee queries        │          │ • MCP Tool calling   │          │
+│   │ • Attendance summary │          │ • 14 available tools │          │
+│   │ • Mark queries       │          │                      │          │
+│   └──────────────────────┘          └──────────────────────┘          │
+│              │                                  │                      │
+│              └──────────────┬───────────────────┘                      │
+│                             ▼                                           │
+│                   ┌─────────────────────────────┐                      │
+│                   │   Database Query Execution   │                      │
+│                   │   + Live Data Injection      │                      │
+│                   └─────────────────────────────┘                      │
+│                             ▼                                           │
+│                   ┌─────────────────────────────┐                      │
+│                   │  Response Generation        │                      │
+│                   │  (Markdown formatted)       │                      │
+│                   └─────────────────────────────┘                      │
+│                             ↓                                           │
+│                   Response to User (Chat Widget)                       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>🔐 Authentication & Security Flow</span>
+                    <span class="icon">+</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+<pre>
+┌──────────────────┐
+│  User Login      │
+│  (login.html)    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────────────┐
+│  /api/auth/login (POST)              │
+│  • Username + Password               │
+│  • bcrypt verification               │
+└──────────────┬───────────────────────┘
+               │
+               ▼
+        ┌──────────────────┐
+        │  JWT Token Gen   │
+        │  (PyJWT + Secret)│
+        └──────────┬───────┘
+                   │
+                   ▼
+        ┌────────────────────────────────┐
+        │  Token Stored in localStorage  │
+        │  + User Role Cached            │
+        └──────────────┬─────────────────┘
+                       │
+                       ▼
+        ┌──────────────────────────────────────┐
+        │  api.js Auto-Injects JWT Token       │
+        │  Authorization: Bearer &lt;token&gt;       │
+        └──────────────┬───────────────────────┘
+                       │
+                       ▼
+        ┌──────────────────────────────────────┐
+        │  login_required Decorator (Backend)  │
+        │  • Verifies token validity           │
+        │  • Checks role-based permissions     │
+        │  • OPTIONS pass-through for CORS     │
+        └──────────────────────────────────────┘
+</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>📡 Data Flow Example: Creating a Student</span>
+                    <span class="icon">+</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+<pre>
+Frontend (UI) → API Call → Backend Route → DB Query → Response → UI Update
+   │                              │
+   └──> Fetch to /api/students   │
+        with JWT token            │
+                                  ▼
+                            students.py route
+                            ├─ @login_required
+                            ├─ Validate input
+                            ├─ Hash sensitive data
+                            └─ execute() → MySQL
+                                            │
+                                            ▼
+                                    INSERT student table
+                                    ├─ student table
+                                    ├─ student_category
+                                    └─ caste_community
+                                            │
+                                            ▼
+                                    JSON Response Success
+                                            │
+                                            ▼
+                                    Frontend Toast + Table Update
+</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>🛠️ Technology Stack Summary</span>
+                    <span class="icon">+</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Technology</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Frontend</strong></td><td>HTML5, CSS3, Vanilla JS</td></tr>
+                                <tr><td><strong>Backend</strong></td><td>Python 3.11+, Flask 3.x</td></tr>
+                                <tr><td><strong>Database</strong></td><td>MySQL (XAMPP)</td></tr>
+                                <tr><td><strong>Authentication</strong></td><td>JWT (PyJWT), bcrypt</td></tr>
+                                <tr><td><strong>HTTP Client</strong></td><td>Fetch API (browser)</td></tr>
+                                <tr><td><strong>AI</strong></td><td>Ollama (local) / Google Gemini (cloud)</td></tr>
+                                <tr><td><strong>Reporting</strong></td><td>ReportLab, OpenPyxl</td></tr>
+                                <tr><td><strong>Port (Frontend)</strong></td><td>8000</td></tr>
+                                <tr><td><strong>Port (Backend)</strong></td><td>5000</td></tr>
+                                <tr><td><strong>Port (Database)</strong></td><td>3306</td></tr>
+                                <tr><td><strong>Port (Ollama)</strong></td><td>11434</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.accordion-header').forEach(button => {
+            button.addEventListener('click', () => {
+                const accordionContent = button.nextElementSibling;
+                const icon = button.querySelector('.icon');
+                
+                // Toggle active class on button
+                button.classList.toggle('active');
+                
+                if (button.classList.contains('active')) {
+                    // Expand
+                    accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+                } else {
+                    // Collapse
+                    accordionContent.style.maxHeight = "0";
+                }
+
+                // Optional: Close other open accordions (uncomment if you want standard accordion behavior)
+                /*
+                document.querySelectorAll('.accordion-header').forEach(otherButton => {
+                    if (otherButton !== button && otherButton.classList.contains('active')) {
+                        otherButton.classList.remove('active');
+                        otherButton.nextElementSibling.style.maxHeight = "0";
+                    }
+                });
+                */
+            });
+        });
+    </script>
+</body>
+</html>
