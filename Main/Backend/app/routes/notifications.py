@@ -56,18 +56,22 @@ def send_notification():
 
     if not student_ids:
         return error("At least one student must be selected")
-    if not custom_message and not template_id:
-        return error("Either a template or custom message is required")
 
-    # Get template if provided
     template_content = custom_message
     if template_id and not custom_message:
         tmpl = query("SELECT content_template FROM notification_template WHERE template_id=%s",
                      (template_id,), fetchone=True)
         if tmpl:
             template_content = tmpl["content_template"]
+            
+    if not template_content:
+        return error("Either a template or custom message is required")
 
     sent_count = 0
+    failures = []
+    import requests
+    NODE_SERVICE_URL = "http://localhost:3001"
+    
     for student_id in student_ids:
         # Get student info for placeholder substitution
         student = query("""SELECT st.name, st.roll_number, st.reg_number, st.guardian_name, st.guardian_phone,
@@ -78,20 +82,50 @@ def send_notification():
 
         # Replace placeholders
         message = template_content
-        message = message.replace("{StudentName}", student.get("name", ""))
-        message = message.replace("{RollNumber}", student.get("roll_number", ""))
-        message = message.replace("{RegNumber}", student.get("reg_number", ""))
-        message = message.replace("{GuardianName}", student.get("guardian_name", ""))
+        message = message.replace("{StudentName}", student.get("name", "") or "")
+        message = message.replace("{RollNumber}", student.get("roll_number", "") or "")
+        message = message.replace("{RegNumber}", student.get("reg_number", "") or "")
+        message = message.replace("{GuardianName}", student.get("guardian_name", "") or "")
 
         # Additional dynamic placeholders from request
         for key, val in data.get("placeholders", {}).items():
-            message = message.replace(f"{{{key}}}", str(val))
+            message = message.replace(f"{{{key}}}", str(val) or "")
 
-        # Log the notification (actual sending would integrate with SMS/Email/WhatsApp API)
+        delivery_status = 'failed'
+        
+        # Dispatch logic based on channel
+        if channel_type == 'whatsapp':
+            phone = student.get("guardian_phone")
+            if phone:
+                try:
+                    payload = {"number": phone, "message": message}
+                    res = requests.post(f"{NODE_SERVICE_URL}/send", json=payload, timeout=15)
+                    if res.status_code == 200:
+                        delivery_status = 'sent'
+                        sent_count += 1
+                    else:
+                        delivery_status = 'failed'
+                        err_msg = res.json().get("error", "Unknown error") if "application/json" in res.headers.get("Content-Type", "") else res.text
+                        failures.append(f"{student.get('name')}: {err_msg}")
+                except requests.exceptions.RequestException as e:
+                    delivery_status = 'failed'
+                    failures.append(f"{student.get('name')}: Node.js service unreachable")
+            else:
+                failures.append(f"{student.get('name')}: No guardian phone number")
+        else:
+            # Mock email/SMS for now, assume success
+            delivery_status = 'sent'
+            sent_count += 1
+
+        # Log the notification
         execute("""INSERT INTO notification_log (student_id, sender_staff_id, channel_type, message_content, status)
-                   VALUES (%s,%s,%s,%s,'sent')""",
-                (student_id, user.get("ref_id"), channel_type, message))
-        sent_count += 1
+                   VALUES (%s,%s,%s,%s,%s)""",
+                (student_id, user.get("ref_id"), channel_type, message, delivery_status))
+
+    if sent_count == 0 and failures:
+        return error("Failed: " + " | ".join(failures))
+    elif failures:
+        return success({"sent_count": sent_count, "failures": failures}, f"Sent to {sent_count}, but failed for {len(failures)}: " + " | ".join(failures))
 
     return success({"sent_count": sent_count}, f"Notification sent to {sent_count} student(s)")
 

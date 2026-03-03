@@ -21,6 +21,7 @@ A full-stack college management application built with **Flask** (backend) and *
 ### Prerequisites
 - [XAMPP](https://www.apachefriends.org/) with **MySQL** running on port `3306`
 - [Python 3.11+](https://www.python.org/)
+- [Node.js 18+](https://nodejs.org/) — required for WhatsApp integration
 - [uv](https://docs.astral.sh/uv/) — fast Python package manager (`pip install uv`)
 - [Ollama](https://ollama.ai/) (optional but recommended for AIRA)
 
@@ -116,6 +117,19 @@ Navigate to: **`http://localhost:8000/login.html`**
 | `superadmin` | `Admin@123` | Super Admin |
 
 > ⚠️ **Change the default password immediately after first login!**
+
+---
+
+### 3b. WhatsApp Microservice (Optional but recommended)
+
+To enable AIRA to send WhatsApp messages, the Node.js microservice must have its dependencies installed.
+
+```powershell
+cd Main/whatsapp_service
+npm install
+```
+
+> **Note:** You do not need to run this manually if you use `start_server.py`. The launcher will automatically run `npm install` and start the node server for you on port 3001!
 
 ---
 

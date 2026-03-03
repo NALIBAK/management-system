@@ -25,8 +25,10 @@ import qrcode
 ROOT       = os.path.dirname(os.path.abspath(__file__))
 BACKEND    = os.path.join(ROOT, "Main", "Backend")
 FRONTEND   = os.path.join(ROOT, "Main", "Frontend")
+WHATSAPP   = os.path.join(ROOT, "Main", "whatsapp_service")
 BACKEND_PORT  = 5000
 FRONTEND_PORT = 8000
+WHATSAPP_PORT = 3001
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def get_lan_ip():
@@ -68,6 +70,24 @@ def run_backend_server():
         cwd=BACKEND,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+    )
+
+def run_whatsapp_service():
+    """Start the Node.js WhatsApp automated microservice."""
+    print(f"[whatsapp] Starting WhatsApp Node.js service on 0.0.0.0:{WHATSAPP_PORT} ...")
+    
+    # Check if node modules exist
+    node_modules_path = os.path.join(WHATSAPP, "node_modules")
+    if not os.path.exists(node_modules_path):
+        print("[whatsapp] ⚠️  node_modules not found. Installing dependencies first...")
+        subprocess.run(["npm", "install"], cwd=WHATSAPP, shell=True)
+
+    subprocess.Popen(
+        ["node", "index.js"],
+        cwd=WHATSAPP,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True # Required on Windows to resolve 'node' from PATH in Popen easily
     )
 
 def start_cloudflare_tunnel(port):
@@ -141,6 +161,7 @@ def main():
     parser.add_argument("--tunnel", action="store_true", help="Enable Cloudflare internet tunnel")
     parser.add_argument("--no-backend", action="store_true", help="Skip backend (already running)")
     parser.add_argument("--no-frontend", action="store_true", help="Skip frontend (already running)")
+    parser.add_argument("--no-whatsapp", action="store_true", help="Skip WhatsApp microservice")
     args = parser.parse_args()
 
     print("\n" + "="*55)
@@ -152,6 +173,8 @@ def main():
         run_frontend_server()
     if not args.no_backend:
         run_backend_server()
+    if not args.no_whatsapp:
+        run_whatsapp_service()
 
     # Wait for servers to start
     print("[setup]   Waiting for servers to start...")

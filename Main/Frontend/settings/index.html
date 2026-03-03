@@ -24,6 +24,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('llm')">🤖 AIRA / LLM Config</button>
                     <button class="tab-btn" onclick="switchTab('college')">🏛️ College Info</button>
+                    <button class="tab-btn" onclick="switchTab('whatsapp')">📱 WhatsApp Settings</button>
                     <button class="tab-btn" onclick="switchTab('password')">🔒 Change Password</button>
                 </div>
 
@@ -150,6 +151,54 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- WhatsApp Integration Tab -->
+                <div id="tab-whatsapp" style="display:none">
+                    <div class="card" style="max-width:550px">
+                        <div class="card-header">
+                            <h3 class="card-title">📱 WhatsApp Integration</h3>
+                        </div>
+                        <div class="card-body" style="text-align: center;">
+                            <p style="margin-bottom: 20px; color: #555;">Connect your WhatsApp account to enable AIRA to
+                                send native notifications to parents and staff automatically.</p>
+
+                            <div id="wa-status-container"
+                                style="margin: 20px 0; padding: 15px; border-radius: 8px; background: #eef4fb; border: 1px solid #d1dfed;">
+                                <h4 style="margin: 0; font-size: 1.1rem;">Service Status: <span id="wa-status-text"
+                                        style="font-weight: bold; color: #0056b3;">Checking...</span></h4>
+                            </div>
+
+                            <div id="wa-qr-container"
+                                style="display: none; margin: 20px 0; padding: 20px; background: white; border-radius: 8px; border: 1px dashed #ccc;">
+                                <p class="text-muted" style="margin-bottom: 15px;">Scan this static QR code with the
+                                    WhatsApp app (Linked Devices).</p>
+                                <img id="wa-qr-image" src="" alt="WhatsApp Login QR Code"
+                                    style="max-width: 250px; display: block; margin: 0 auto;">
+                                <div style="margin-top: 20px;">
+                                    <button class="btn btn-outline" onclick="loadWhatsAppStatus()">↻ Refresh QR &
+                                        Status</button>
+                                </div>
+                            </div>
+
+                            <div id="wa-actions" style="display: none; margin-top: 20px; text-align: left;">
+                                <div class="form-group">
+                                    <label class="form-label">Test Connection</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="text" id="wa-test-number" class="form-control"
+                                            placeholder="Your Phone number (e.g. 9876543210)">
+                                        <button class="btn btn-primary" onclick="testWhatsApp()">Send Test</button>
+                                    </div>
+                                    <div class="form-hint">Enter your number to receive a secure sandbox test limit
+                                        message.</div>
+                                </div>
+                                <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+                                <button class="btn"
+                                    style="background: white; color: #dc3545; border: 1px solid #dc3545; width: 100%;"
+                                    onclick="logoutWhatsApp()">Disconnect WhatsApp</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -168,12 +217,14 @@
         renderHeader('System Settings', 'Configure global application parameters');
 
         function switchTab(tab) {
-            ['llm', 'college', 'password'].forEach(t => {
+            ['llm', 'college', 'whatsapp', 'password'].forEach(t => {
                 document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
             });
             document.querySelectorAll('.tab-btn').forEach((b, i) => {
-                b.classList.toggle('active', ['llm', 'college', 'password'][i] === tab);
+                b.classList.toggle('active', ['llm', 'college', 'whatsapp', 'password'][i] === tab);
             });
+
+            if (tab === 'whatsapp') loadWhatsAppStatus();
         }
 
         function toggleApiKey() {
@@ -231,6 +282,71 @@
             const res = await api.post('/auth/change-password', data);
             if (res?.ok) { utils.toast('Password changed!', 'success'); document.getElementById('password-form').reset(); }
             else utils.toast(res?.data?.message || 'Failed', 'error');
+        }
+
+        async function loadWhatsAppStatus() {
+            const statusEl = document.getElementById('wa-status-text');
+            statusEl.textContent = 'Checking...';
+            statusEl.style.color = '#0056b3';
+
+            const res = await api.get('/whatsapp/status');
+            if (res?.ok) {
+                if (res.data.status === 'CONNECTED') {
+                    statusEl.textContent = 'CONNECTED ✅';
+                    statusEl.style.color = '#28a745';
+                    document.getElementById('wa-qr-container').style.display = 'none';
+                    document.getElementById('wa-actions').style.display = 'block';
+                } else {
+                    statusEl.textContent = 'DISCONNECTED ❌';
+                    statusEl.style.color = '#dc3545';
+                    document.getElementById('wa-actions').style.display = 'none';
+                    fetchWhatsAppQR();
+                }
+            } else {
+                statusEl.textContent = 'SERVICE OFFLINE ⚠️';
+                statusEl.style.color = '#dc3545';
+                document.getElementById('wa-qr-container').style.display = 'none';
+                document.getElementById('wa-actions').style.display = 'none';
+                utils.toast('WhatsApp microservice is not running. Please restart the backend.', 'error');
+            }
+        }
+
+        async function fetchWhatsAppQR() {
+            const res = await api.get('/whatsapp/qr');
+            if (res?.ok && res.data.qr) {
+                document.getElementById('wa-qr-image').src = res.data.qr;
+                document.getElementById('wa-qr-container').style.display = 'block';
+            } else if (res?.ok && res.data.status === 'CONNECTED') {
+                loadWhatsAppStatus(); // They probably scanned it just now
+            } else {
+                document.getElementById('wa-qr-container').style.display = 'none';
+            }
+        }
+
+        async function testWhatsApp() {
+            const number = document.getElementById('wa-test-number').value.trim();
+            if (!number) return utils.toast('Please enter a phone number', 'error');
+
+            utils.toast('Simulating typing and sending...', 'info');
+            const res = await api.post('/whatsapp/send', {
+                number: number,
+                message: "Hello! This is a test message from AIRA. The College Management System is successfully linked to WhatsApp Web. ✅"
+            });
+            if (res?.ok) {
+                utils.toast('Test message sent successfully!', 'success');
+                document.getElementById('wa-test-number').value = '';
+            } else {
+                utils.toast(res?.data?.error || 'Failed to send message', 'error');
+            }
+        }
+
+        async function logoutWhatsApp() {
+            if (!confirm('Are you sure you want to disconnect WhatsApp? You will need to scan the QR code again.')) return;
+            const res = await api.post('/whatsapp/logout');
+            if (res?.ok) {
+                utils.toast('Logged out successfully', 'success');
+                setTimeout(loadWhatsAppStatus, 1500); // Give node microservice time to cleanly log out
+            }
         }
 
         init();

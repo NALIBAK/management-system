@@ -69,6 +69,19 @@
 
                             <div class="form-row">
                                 <div class="form-group">
+                                    <label class="form-label">Guardian Name</label>
+                                    <input type="text" id="guardian-name" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Guardian Phone (WhatsApp) <span
+                                            class="required">*</span></label>
+                                    <input type="tel" id="guardian-phone" class="form-control"
+                                        placeholder="+1234567890">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
                                     <label class="form-label">Course <span class="required">*</span></label>
                                     <select id="course-id" class="form-control" required onchange="loadSections()">
                                         <option value="">Select Course</option>
@@ -168,6 +181,8 @@
                 document.getElementById('name').value = s.name;
                 document.getElementById('email').value = s.email || '';
                 document.getElementById('phone').value = s.phone || '';
+                document.getElementById('guardian-name').value = s.guardian_name || '';
+                document.getElementById('guardian-phone').value = s.guardian_phone || '';
                 document.getElementById('gender').value = s.gender || 'male';
                 document.getElementById('address').value = s.address || '';
                 document.getElementById('student-category').value = s.student_category || 'regular';
@@ -196,6 +211,8 @@
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
+                guardian_name: document.getElementById('guardian-name').value,
+                guardian_phone: document.getElementById('guardian-phone').value,
                 gender: document.getElementById('gender').value,
                 address: document.getElementById('address').value,
                 course_id: document.getElementById('course-id').value,

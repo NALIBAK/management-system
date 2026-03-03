@@ -296,6 +296,25 @@ MCP_TOOLS = [
             },
             "required": ["template"]
         }
+    },
+    {
+        "name": "send_whatsapp_notification",
+        "description": "Send a personalized WhatsApp message to an array of phone numbers. Use this to notify parents, students, or staff about important updates like fee defaults, attendance records, or meeting alerts.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "phone_numbers": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "List of phone numbers to send the message to (requires country code, but defaults to +91 if 10 digits)"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "The exact text message to send"
+                }
+            },
+            "required": ["phone_numbers", "message"]
+        }
     }
 ]
 
@@ -338,6 +357,8 @@ def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
     try:
         if tool_name == "generate_beautiful_pdf_report":
             return _execute_beautiful_pdf_report(tool_args, user)
+        elif tool_name == "send_whatsapp_notification":
+            return _execute_send_whatsapp_notification(tool_args, user)
         elif tool_name == "generate_report":
             return _execute_generate_report(tool_args, user)
         elif tool_name == "navigate_to":
@@ -1886,6 +1907,42 @@ def _execute_generate_report(tool_args: dict, user: dict):
     except Exception as e:
         return {"response_type": "text", "message": f"Failed to generate {fmt} report: {str(e)}"}
 
+
+def _execute_send_whatsapp_notification(tool_args: dict, user: dict) -> dict:
+    import requests
+    numbers = tool_args.get('phone_numbers', [])
+    message = tool_args.get('message', '')
+    
+    if not numbers or not message:
+        return {"error": "Phone numbers and message are required."}
+        
+    NODE_SERVICE_URL = "http://localhost:3001"
+    success_count = 0
+    failures = []
+    
+    for number in numbers:
+        try:
+            payload = {"number": number, "message": message}
+            response = requests.post(f"{NODE_SERVICE_URL}/send", json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                success_count += 1
+            else:
+                failures.append({"number": number, "error": response.text})
+        except Exception as e:
+            failures.append({"number": number, "error": str(e)})
+
+    return {
+        "success": True,
+        "result": {
+            "total_attempted": len(numbers),
+            "successful": success_count,
+            "failed": len(failures),
+            "failures": failures
+        },
+        "message": f"Successfully initiated WhatsApp sending. Delivered to {success_count}/{len(numbers)} numbers.",
+        "type": "whatsapp_report"
+    }
 
 def _execute_beautiful_pdf_report(tool_args: dict, user: dict) -> dict:
     """
