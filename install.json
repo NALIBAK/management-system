@@ -1,0 +1,34 @@
+{
+    "run": [
+      {
+        "method": "shell.run",
+        "params": {
+          "message": "pip install uv"
+        }
+      },
+      {
+        "method": "shell.run",
+        "params": {
+          "message": [
+            "uv venv",
+            "uv pip install -r requirements.txt"
+          ],
+          "path": "Main/Backend"
+        }
+      },
+      {
+        "method": "shell.run",
+        "params": {
+          "message": "npm install",
+          "path": "Main/whatsapp_service"
+        }
+      },
+      {
+        "method": "notify",
+        "params": {
+          "html": "Installation completed successfully! You can now start the application."
+        }
+      }
+    ]
+  }
+  
