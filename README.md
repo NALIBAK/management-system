@@ -119,7 +119,65 @@ Navigate to: **`http://localhost:8000/login.html`**
 
 ---
 
+### 📱 Accessing the App on Your Local Network (LAN)
+
+Any phone, tablet, or PC on the same Wi-Fi network can access the app using the **Network Launcher**:
+
+```powershell
+cd Main\Backend
+uv run python ..\..\start_server.py
+```
+
+This script:
+- Automatically detects your machine's LAN IP (e.g., `192.168.1.5`)
+- Starts both frontend and backend servers
+- Prints a **QR code** in the terminal — scan it with any phone to open the app
+
+> ✅ **No configuration needed.** The frontend automatically routes API calls to the correct server IP (fixed in `assets/js/api.js` using `window.location.hostname`).
+
+#### Access URLs (example with LAN IP `192.168.1.5`):
+| Purpose | URL |
+|---------|-----|
+| App | `http://192.168.1.5:8000/login.html` |
+| API | `http://192.168.1.5:5000/api/health` |
+
+---
+
+### 🌐 Accessing the App over the Internet (Public URL)
+
+Use [Cloudflare Quick Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) — **no account needed**, no port forwarding:
+
+```powershell
+cd Main\Backend
+uv run python ..\..\start_server.py --tunnel
+```
+
+- `cloudflared` is downloaded automatically if not installed
+- A public HTTPS URL like `https://random-name.trycloudflare.com` is printed along with a QR code
+- Share the URL/QR with anyone in the world to give them access
+
+> ⚠️ **Tunnel URLs are temporary** — they change every time you start a new tunnel session.
+
+---
+
+### 🔧 Fixing the Superadmin Password (Hash Mismatch)
+
+If you get a `401 Invalid username or password` error after re-importing `seed.sql`:
+
+```powershell
+cd Main\Backend
+uv run python ..\..\reset_admin.py
+```
+
+This permanently fixes the issue by:
+1. Generating a fresh Python-bcrypt hash for `Admin@123`
+2. Updating the `user_account` table in MySQL
+3. Patching `seed.sql` with the correct hash so future fresh installs won't repeat this
+
+---
+
 ### 4. (Optional) Populate Complete Database
+
 
 The project includes a powerful script to simulate a fully-functioning engineering college. Note: **Running this will DELETE all existing data in your database** and generate fresh data.
 

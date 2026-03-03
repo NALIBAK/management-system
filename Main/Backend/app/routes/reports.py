@@ -72,8 +72,19 @@ def fee_defaulters():
 @reports_bp.route("/department-summary", methods=["GET"])
 @login_required
 def department_summary():
-    ay_id = request.args.get("academic_year_id")
-    sql = """SELECT d.department_id, d.name as department_name,
+    user = request.current_user
+    role = user.get("role", "")
+    ref_id = user.get("ref_id")  # staff_id for staff/hod roles
+
+    params = []
+    dept_filter = ""
+
+    # Scope to staff's own department for non-admin roles
+    if role in ("staff", "hod") and ref_id:
+        dept_filter = " WHERE d.department_id = (SELECT department_id FROM staff WHERE staff_id = %s)"
+        params.append(ref_id)
+
+    sql = f"""SELECT d.department_id, d.name as department_name,
              COUNT(DISTINCT st.student_id) as total_students,
              COUNT(DISTINCT s.staff_id) as total_staff,
              COUNT(DISTINCT c.course_id) as total_courses
@@ -81,8 +92,9 @@ def department_summary():
              LEFT JOIN course c ON c.department_id=d.department_id
              LEFT JOIN student st ON st.course_id=c.course_id AND st.status='active'
              LEFT JOIN staff s ON s.department_id=d.department_id AND s.status='active'
+             {dept_filter}
              GROUP BY d.department_id ORDER BY d.name"""
-    return success(query(sql, []))
+    return success(query(sql, params))
 
 
 # ===== NEW REPORT ENDPOINTS =====
