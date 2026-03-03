@@ -27,6 +27,19 @@ A full-stack college management application built with **Flask** (backend) and *
 
 ---
 
+### 🎨 Pinokio One-Click Install (Easiest Method)
+
+If you don't want to use the terminal, you can install everything with one click using the **Pinokio AI Browser**:
+1. Download and install [Pinokio](https://pinokio.computer/)
+2. Open Pinokio and paste your GitHub repository URL into the top search bar: `https://github.com/YOUR_USERNAME/management-system.git`
+3. Click **Download**, then click **Install**. 
+4. Pinokio will automatically download Python, uv, Node.js, and set up all environments.
+5. Click **Start** to launch the entire college system and open your browser!
+
+> *Note: You must still manually have XAMPP/MySQL running on your machine for the database to function.*
+
+---
+
 ### 1. Database Setup
 
 1. Start **MySQL** in XAMPP Control Panel.
