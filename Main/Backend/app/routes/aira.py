@@ -274,6 +274,28 @@ MCP_TOOLS = [
             },
             "required": ["report_type"]
         }
+    },
+    {
+        "name": "generate_beautiful_pdf_report",
+        "description": "Generate a beautifully formatted, professional A4 PDF report with the college letterhead and institutional styling. Use this for: full student profile (CGPA per semester + attendance + activities + fees), fee defaulters list, or attendance summary. Always prefer this over generate_report when the user asks for a 'beautiful', 'formatted', 'full', 'complete', 'detailed', or 'download' report.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "type": "string",
+                    "description": "Which report template to use",
+                    "enum": ["student_full_profile", "fee_defaulters", "attendance_summary"]
+                },
+                "student_id":        {"type": "integer", "description": "Student ID (required for student_full_profile)"},
+                "section_id":        {"type": "integer", "description": "Section ID filter (for attendance_summary)"},
+                "department_id":     {"type": "integer", "description": "Department ID filter"},
+                "academic_year_id":  {"type": "integer", "description": "Academic year ID (for fee_defaulters)"},
+                "subject_id":        {"type": "integer", "description": "Subject ID filter (for attendance_summary)"},
+                "date_from":         {"type": "string",  "description": "Start date YYYY-MM-DD (for attendance_summary)"},
+                "date_to":           {"type": "string",  "description": "End date YYYY-MM-DD (for attendance_summary)"}
+            },
+            "required": ["template"]
+        }
     }
 ]
 
@@ -314,7 +336,9 @@ def execute_tool(tool_name: str, tool_args: dict, user: dict) -> dict:
     scope = get_user_scope(user)
     
     try:
-        if tool_name == "generate_report":
+        if tool_name == "generate_beautiful_pdf_report":
+            return _execute_beautiful_pdf_report(tool_args, user)
+        elif tool_name == "generate_report":
             return _execute_generate_report(tool_args, user)
         elif tool_name == "navigate_to":
             return _execute_navigate_to(tool_args)
@@ -1861,6 +1885,68 @@ def _execute_generate_report(tool_args: dict, user: dict):
         }
     except Exception as e:
         return {"response_type": "text", "message": f"Failed to generate {fmt} report: {str(e)}"}
+
+
+def _execute_beautiful_pdf_report(tool_args: dict, user: dict) -> dict:
+    """
+    Execute the generate_beautiful_pdf_report MCP tool.
+    Delegates to the pdf_reports blueprint's data builders and WeasyPrint renderer.
+    """
+    from app.routes.pdf_reports import (
+        _render_pdf,
+        _build_student_full_profile,
+        _build_fee_defaulters,
+        _build_attendance_summary,
+    )
+
+    template   = tool_args.get("template", "")
+    student_id = tool_args.get("student_id")
+
+    try:
+        if template == "student_full_profile":
+            if not student_id:
+                return {"response_type": "text", "message": "❌ Please provide a student ID or name for the full profile report."}
+            ctx = _build_student_full_profile(int(student_id))
+            if not ctx:
+                return {"response_type": "text", "message": f"❌ No student found with ID {student_id}."}
+            filename = _render_pdf("student_full_profile.html", ctx)
+            label    = f"Full Profile — {ctx['student']['name']}"
+
+        elif template == "fee_defaulters":
+            ctx      = _build_fee_defaulters(
+                academic_year_id=tool_args.get("academic_year_id"),
+                department_id=tool_args.get("department_id"),
+            )
+            filename = _render_pdf("fee_defaulters.html", ctx)
+            label    = f"Fee Defaulters ({ctx['academic_year']})"
+
+        elif template == "attendance_summary":
+            ctx      = _build_attendance_summary(
+                section_id=tool_args.get("section_id"),
+                student_id=tool_args.get("student_id"),
+                department_id=tool_args.get("department_id"),
+                subject_id=tool_args.get("subject_id"),
+                date_from=tool_args.get("date_from"),
+                date_to=tool_args.get("date_to"),
+            )
+            filename = _render_pdf("attendance_summary.html", ctx)
+            label    = f"Attendance Summary"
+
+        else:
+            return {"response_type": "text", "message": f"❌ Unknown template: '{template}'. Use student_full_profile, fee_defaulters, or attendance_summary."}
+
+    except Exception as e:
+        return {"response_type": "text", "message": f"❌ PDF generation failed: {str(e)}"}
+
+    download_url = f"/api/pdf-reports/download/{filename}"
+    return {
+        "response_type": "report",
+        "filename": filename,
+        "format": "PDF",
+        "download_url": download_url,
+        "preview_url":  download_url,
+        "message": f"✅ **{label}** — PDF is ready!\n\n📄 [Download PDF]({download_url})\n\n> 🎨 This report was generated with professional A4 styling including college letterhead, page numbers, and institutional formatting."
+    }
 
 def _execute_navigate_to(tool_args: dict):
     page = tool_args.get("page", "").lower()

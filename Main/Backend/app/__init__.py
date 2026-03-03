@@ -23,6 +23,7 @@ def create_app():
     from app.routes.aira import aira_bp
     from app.routes.notifications import notifications_bp
     from app.routes.users import users_bp
+    from app.routes.pdf_reports import pdf_report_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(college_bp, url_prefix="/api/college")
@@ -37,6 +38,11 @@ def create_app():
     app.register_blueprint(aira_bp, url_prefix="/api/aira")
     app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
     app.register_blueprint(users_bp, url_prefix="/api/users")
+    app.register_blueprint(pdf_report_bp, url_prefix="/api/pdf-reports")
+
+    # Ensure reports archive directory exists
+    import os
+    os.makedirs(os.path.join(os.path.dirname(__file__), "..", "reports_archive"), exist_ok=True)
 
     @app.route("/api/health")
     def health():
