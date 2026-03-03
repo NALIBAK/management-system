@@ -1,0 +1,23 @@
+{
+    "run": [
+        {
+            "method": "shell.run",
+            "params": {
+                "message": "uv run python ../../start_server.py",
+                "path": "Main/Backend",
+                "on": [
+                    {
+                        "match": "(?i)Frontend server started",
+                        "return": true
+                    }
+                ]
+            }
+        },
+        {
+            "method": "browser.open",
+            "params": {
+                "uri": "http://127.0.0.1:8000/login.html"
+            }
+        }
+    ]
+}
