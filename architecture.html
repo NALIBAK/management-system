@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>College Management System Architecture</title>
+    <title>College Management System - PlantUML Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
     <style>
         :root {
             --orange: #ff8c00;
@@ -14,7 +15,6 @@
             --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
             --text-main: #f8fafc;
-            --text-muted: #94a3b8;
         }
 
         * {
@@ -33,13 +33,13 @@
             padding: 2rem;
         }
 
-        /* Background Orbs for Glassmorphism Effect */
+        /* Animated Background Orbs */
         .orb {
             position: fixed;
             border-radius: 50%;
             filter: blur(120px);
             z-index: -1;
-            opacity: 0.7;
+            opacity: 0.6;
             animation: float 20s infinite alternate ease-in-out;
         }
 
@@ -148,32 +148,29 @@
         .content-inner {
             padding: 2rem;
             border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* ASCII Art Styling */
-        pre {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.85rem;
-            line-height: 1.2;
-            color: #a7f3d0; /* Soft green tint for code */
-            overflow-x: auto;
-            white-space: pre;
+        /* Diagram Image Styling */
+        .diagram-container img {
+            max-width: 100%;
+            height: auto;
+            filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.5));
+            border-radius: 8px;
         }
 
-        /* Custom Scrollbar for Pre */
-        pre::-webkit-scrollbar {
-            height: 8px;
+        .loading-text {
+            color: var(--orange);
+            font-style: italic;
+            animation: pulse 1.5s infinite;
         }
-        pre::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-        }
-        pre::-webkit-scrollbar-thumb {
-            background: var(--orange);
-            border-radius: 4px;
-        }
-        pre::-webkit-scrollbar-thumb:hover {
-            background: var(--green);
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
         }
 
         /* Table Styling */
@@ -182,19 +179,16 @@
             border-collapse: collapse;
             color: var(--text-main);
         }
-
         th, td {
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid var(--glass-border);
         }
-
         th {
             background: rgba(255, 255, 255, 0.05);
             color: var(--orange);
             font-weight: 600;
         }
-
         tr:hover td {
             background: rgba(255, 255, 255, 0.03);
             color: var(--green);
@@ -207,345 +201,227 @@
     <div class="orb orb-green"></div>
 
     <div class="container">
-        <h1>College Management System Architecture</h1>
+        <h1>College System PlantUML Architecture</h1>
 
         <div class="accordion">
             <div class="accordion-item">
                 <button class="accordion-header">
-                    <span>📐 College Management System - Architecture Diagram</span>
+                    <span>📐 1. Overall System Architecture (Component Diagram)</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="accordion-content">
-                    <div class="content-inner">
-<pre>
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                                  USER LAYER                                      │
-│                        (Client Browser / Web Interface)                          │
-└──────────────────────────────────┬──────────────────────────────────────────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    │                             │
-                    ▼                             ▼
-        ┌──────────────────────┐    ┌──────────────────────┐
-        │   LOGIN PAGE         │    │   THEME TOGGLE       │
-        │   (login.html)       │    │   (Dark/Light)       │
-        └──────────────────────┘    └──────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          FRONTEND LAYER (HTML/CSS/JS)                           │
-│                       Main/Frontend/ Directory Structure                        │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                   │
-│  ┌─ Dashboard (dashboard.html)                                                   │
-│  ├─ Students Module (students/index.html + add.html)                             │
-│  ├─ Staff Module (staff/index.html + add.html)                                   │
-│  ├─ Departments Module (departments/index.html)                                  │
-│  ├─ Courses Module (courses/index.html)                                          │
-│  ├─ Timetable Module (timetable/index.html)                                      │
-│  ├─ Attendance Module (attendance/index.html)                                    │
-│  ├─ Marks & Results (marks/index.html)                                           │
-│  ├─ Fees Module (fees/index.html)                                               │
-│  ├─ Reports Module (reports/index.html)                                          │
-│  ├─ Notifications (notifications/index.html)                                     │
-│  ├─ Settings (settings/index.html) → LLM Config                                  │
-│  │                                                                                │
-│  └─ Shared Assets                                                                │
-│     ├─ CSS: main.css (design system) + aira.css (AI widget)                     │
-│     ├─ JS Client Libraries:                                                      │
-│     │  ├─ api.js (HTTP client, auto-JWT injection)                              │
-│     │  ├─ auth.js (JWT management, auth checks)                                 │
-│     │  ├─ theme.js (Dark/light theme toggle)                                    │
-│     │  ├─ utils.js (Shared utilities)                                           │
-│     │  ├─ sidebar.js (Navigation renderer)                                      │
-│     │  └─ aira.js (AI chat widget with 7 quick actions)                        │
-│                                                                                   │
-└─────────────────────────────────────┬───────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    │                                   │
-                    ▼                                   ▼
-           ┌─────────────────┐              ┌───────────────────────┐
-           │  HTTP Client    │              │  JWT Token Storage    │
-           │  (Fetch API)    │              │  (localStorage)       │
-           │  Port: 8000     │              │                       │
-           └────────┬────────┘              └───────────────────────┘
-                    │
-                    └─────────────┬──────────────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │  REST API Calls (JSON)     │
-                    │  http://localhost:5000     │
-                    │        /api/* │
-                    └──────────────┬──────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────────┐
-│                           BACKEND LAYER (Flask + Python)                        │
-│                         Main/Backend/ Directory Structure                       │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                   │
-│  ┌─ run.py (Flask App Entry Point, Port 5000)                                   │
-│  ├─ config.py (Environment variables, CORS config)                              │
-│  │                                                                                │
-│  ├─ app/__init__.py (Flask App Factory)                                         │
-│  │  ├─ CORS Initialization                                                       │
-│  │  ├─ Blueprint Registration                                                    │
-│  │  └─ strict_slashes=False                                                      │
-│  │                                                                                │
-│  ├─ app/db.py (Database Connection Pool - PyMySQL)                              │
-│  │  ├─ query() method (SELECT with fetchone/fetchall)                           │
-│  │  └─ execute() method (INSERT/UPDATE/DELETE)                                  │
-│  │                                                                                │
-│  ├─ app/utils/                                                                   │
-│  │  ├─ auth.py (bcrypt hashing, JWT creation/verification, decorators)          │
-│  │  └─ response.py (Standard JSON response helpers, serializers)                 │
-│  │                                                                                │
-│  └─ app/routes/ (12 Module Blueprints - One file per module)                    │
-│     ├─ auth.py (POST /login, /change-password)                                  │
-│     ├─ college.py (College CRUD, departments, academic years)                   │
-│     ├─ courses.py (Courses CRUD, subjects, semesters)                           │
-│     ├─ students.py (Student CRUD, category, caste/community)                    │
-│     ├─ staff.py (Staff CRUD, subject allocations)                               │
-│     ├─ timetable.py (Timetable CRUD, periods, rooms)                            │
-│     ├─ marks.py (Exams, bulk entry, semester results, GPA/CGPA)                 │
-│     ├─ attendance.py (Bulk attendance, summary tracking)                         │
-│     ├─ fees.py (Fee structures, payments, scholarships)                         │
-│     ├─ reports.py (12 Report Endpoints - See below)                             │
-│     ├─ aira.py (AI Assistant: MCP tools, Ollama/Gemini bridge)                 │
-│     └─ notifications.py (Parent notifications: email/SMS/WhatsApp)              │
-│                                                                                   │
-└──────────────────────────────────┬───────────────────────────────────────────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    │                             │
-                    ▼                             ▼
-┌─────────────────────────────────┐    ┌──────────────────────────┐
-│    DATABASE LAYER               │    │   AI INTEGRATION LAYER   │
-│    (MySQL via XAMPP)            │    │                          │
-├─────────────────────────────────┤    ├──────────────────────────┤
-│                                 │    │                          │
-│  38 Tables:                     │    │  ┌─ Ollama (Local)       │
-│  ├─ Core Data                   │    │  │  Port: 11434          │
-│  │  ├─ college                  │    │  │  Models: gemma3:1b    │
-│  │  ├─ academic_year            │    │  │                       │
-│  │  ├─ department               │    │  ├─ Google Gemini (Cloud)
-│  │  ├─ course                   │    │  │  API-based            │
-│  │  ├─ semester                 │    │  │  Models: gemini-1.5   │
-│  │  ├─ subject                  │    │  │                       │
-│  │  ├─ batch                    │    │  └─ LLM Config Table    │
-│  │  └─ section                  │    │     (per college)        │
-│  │                              │    │                          │
-│  ├─ Academic Data               │    │  14 MCP Tools:           │
-│  │  ├─ student                  │    │  ├─ get_students        │
-│  │  ├─ staff                    │    │  ├─ get_attendance      │
-│  │  ├─ subject_allocation       │    │  ├─ get_marks           │
-│  │  └─ user_account             │    │  ├─ generate_report     │
-│  │                              │    │  └─ ... (10 more)       │
-│  ├─ Operations Data             │    │                          │
-│  │  ├─ attendance               │    │  Smart Fallback:        │
-│  │  ├─ mark                     │    │  ├─ Built-in Query Handlers
-│  │  ├─ timetable                │    │  ├─ No LLM Required     │
-│  │  ├─ room                     │    │  └─ Common Report Queries
-│  │  └─ period_definition        │    │                          │
-│  │                              │    │  DB Context Injection:   │
-│  ├─ Administration              │    │  └─ Live Data Queries   │
-│  │  ├─ fee_structure            │    │                          │
-│  │  ├─ fee_payment              │    └──────────────────────────┘
-│  │  ├─ scholarship              │
-│  │  ├─ activity_log             │
-│  │  └─ role                     │
-│  │                              │
-│  ├─ AI & Notifications          │
-│  │  ├─ aira_conversation        │
-│  │  ├─ aira_message             │
-│  │  ├─ aira_action_log          │
-│  │  ├─ llm_config               │
-│  │  ├─ notification_template    │
-│  │  └─ notification_log         │
-│  │                              │
-│  ├─ Academic Enhancements       │
-│  │  ├─ extracurricular_activity │
-│  │  ├─ eligibility_criteria     │
-│  │  ├─ student_eligibility      │
-│  │  ├─ grade_mapping            │
-│  │  └─ semester_result          │
-│  │                              │
-│  └─ Authentication              │
-│     └─ role (super_admin,       │
-│        admin, hod, staff)       │
-│                                 │
-│  Port: 3306 (Default)           │
-│  Character Set: utf8mb4         │
-└─────────────────────────────────┘
-</pre>
+                    <div class="content-inner diagram-container">
+                        <span class="loading-text">Rendering diagram...</span>
+                        <textarea class="plantuml-code" style="display:none;">
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontColor #f8fafc
+skinparam componentStyle rectangle
+skinparam handwritten false
+
+skinparam node {
+    BackgroundColor #0f172a
+    BorderColor #ff8c00
+    FontColor white
+}
+skinparam component {
+    BackgroundColor rgba(255,255,255,0.05)
+    BorderColor #00fa9a
+    FontColor white
+}
+skinparam database {
+    BackgroundColor #0f172a
+    BorderColor #ff8c00
+    FontColor white
+}
+skinparam arrow {
+    Color #00fa9a
+    FontColor #94a3b8
+}
+
+node "User Layer (Browser)" as UserLayer {
+    component "Login Page" as Login
+    component "Theme Toggle" as Theme
+}
+
+node "Frontend Layer (Port: 8000)" as Frontend {
+    component "Modules (Students, Staff, etc.)" as UI
+    component "Shared Assets (CSS, JS)" as Assets
+    component "HTTP Client (api.js)" as HTTP
+    component "JWT Storage (localStorage)" as JWT
+}
+
+node "Backend Layer (Flask, Port: 5000)" as Backend {
+    component "Blueprints (Routes)" as Routes
+    component "Auth & Security (Decorators)" as Utils
+    component "Database Manager" as DBConn
+}
+
+database "Database Layer (MySQL, Port: 3306)" as DB {
+    component "Core & Academic Tables" as CoreDB
+}
+
+node "AI Integration Layer" as AI {
+    component "Ollama (Local) / Gemini" as LLM
+    component "14 MCP Tools" as MCP
+}
+
+UserLayer --> Frontend
+UI --> HTTP
+HTTP --> Routes : "REST API (JSON)"
+JWT .up.> HTTP : "Inject Token"
+Routes --> Utils
+Routes --> DBConn
+DBConn --> DB
+Routes <--> AI : "AIRA Chat Requests"
+@enduml
+                        </textarea>
                     </div>
                 </div>
             </div>
 
             <div class="accordion-item">
                 <button class="accordion-header">
-                    <span>📊 Module Architecture - Reports & AIRA Flow</span>
+                    <span>📊 2. AIRA Request Flow (Activity Diagram)</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="accordion-content">
-                    <div class="content-inner">
-<pre>
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        REPORTS MODULE (12 Types)                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  Original Reports (4)          │  New Reports (8)                       │
-│  ──────────────────────────    │  ────────────────────                 │
-│  ✓ Attendance Defaulters      │  ✓ Student Profile / CGPA             │
-│  ✓ Marks Summary              │  ✓ Fee Structure                       │
-│  ✓ Fee Defaulters             │  ✓ Eligibility Criteria               │
-│  ✓ Department Summary          │  ✓ Category-wise                      │
-│                               │  ✓ Scholarship                        │
-│                               │  ✓ Extracurricular                    │
-│                               │  ✓ Attendance Detailed                │
-│                               │  ✓ Marks Detailed                     │
-│                                                                          │
-│  All Reports:                                                           │
-│  ├─ Query Parameter Filters Support                                    │
-│  ├─ CSV Export                                                          │
-│  └─ Accessible via Reports Page UI + AIRA Chatbot                      │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+                    <div class="content-inner diagram-container">
+                        <span class="loading-text">Rendering diagram...</span>
+                        <textarea class="plantuml-code" style="display:none;">
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontColor #f8fafc
+skinparam activity {
+    BackgroundColor rgba(255,255,255,0.05)
+    BorderColor #00fa9a
+    FontColor white
+    StartColor #ff8c00
+    EndColor #ff8c00
+}
+skinparam arrow {
+    Color #00fa9a
+    FontColor #94a3b8
+}
+skinparam conditionStyle diamond
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    AIRA (AI Research Assistant) Flow                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  User Query (Chat Widget) → Backend /api/aira/chat                      │
-│                             ↓                                           │
-│                   ┌─────────────────────────────┐                      │
-│                   │  Natural Language Processing │                      │
-│                   │  (Query Intent Detection)    │                      │
-│                   └─────────────────────────────┘                      │
-│                             ↓                                           │
-│              ┌──────────────┴───────────────────┐                      │
-│              │                                  │                      │
-│              ▼                                  ▼                       │
-│   ┌──────────────────────┐          ┌──────────────────────┐          │
-│   │ Built-in Handlers    │          │   AI Mode (LLM)      │          │
-│   │ (No LLM Required)    │          │ Ollama or Gemini     │          │
-│   ├──────────────────────┤          ├──────────────────────┤          │
-│   │ • Student queries    │          │ • Complex analysis   │          │
-│   │ • Staff queries      │          │ • Custom questions   │          │
-│   │ • Report generation  │          │ • Data interpretation│          │
-│   │ • Fee queries        │          │ • MCP Tool calling   │          │
-│   │ • Attendance summary │          │ • 14 available tools │          │
-│   │ • Mark queries       │          │                      │          │
-│   └──────────────────────┘          └──────────────────────┘          │
-│              │                                  │                      │
-│              └──────────────┬───────────────────┘                      │
-│                             ▼                                           │
-│                   ┌─────────────────────────────┐                      │
-│                   │   Database Query Execution   │                      │
-│                   │   + Live Data Injection      │                      │
-│                   └─────────────────────────────┘                      │
-│                             ▼                                           │
-│                   ┌─────────────────────────────┐                      │
-│                   │  Response Generation        │                      │
-│                   │  (Markdown formatted)       │                      │
-│                   └─────────────────────────────┘                      │
-│                             ↓                                           │
-│                   Response to User (Chat Widget)                       │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-</pre>
+start
+:User Query (Chat Widget);
+:Backend /api/aira/chat;
+:NLP Intent Detection;
+if (Needs LLM Analysis?) then (No)
+    :Built-in Handlers\n(Direct DB fetch for common reports);
+else (Yes)
+    :Activate AI Mode (Ollama/Gemini);
+    :Execute MCP Tool Calling;
+endif
+:Database Query Execution\n+ Live Data Injection;
+:Response Generation\n(Formatted as Markdown);
+:Return Response to UI;
+stop
+@enduml
+                        </textarea>
                     </div>
                 </div>
             </div>
 
             <div class="accordion-item">
                 <button class="accordion-header">
-                    <span>🔐 Authentication & Security Flow</span>
+                    <span>🔐 3. Authentication Flow (Sequence Diagram)</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="accordion-content">
-                    <div class="content-inner">
-<pre>
-┌──────────────────┐
-│  User Login      │
-│  (login.html)    │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────────────────────────┐
-│  /api/auth/login (POST)              │
-│  • Username + Password               │
-│  • bcrypt verification               │
-└──────────────┬───────────────────────┘
-               │
-               ▼
-        ┌──────────────────┐
-        │  JWT Token Gen   │
-        │  (PyJWT + Secret)│
-        └──────────┬───────┘
-                   │
-                   ▼
-        ┌────────────────────────────────┐
-        │  Token Stored in localStorage  │
-        │  + User Role Cached            │
-        └──────────────┬─────────────────┘
-                       │
-                       ▼
-        ┌──────────────────────────────────────┐
-        │  api.js Auto-Injects JWT Token       │
-        │  Authorization: Bearer &lt;token&gt;       │
-        └──────────────┬───────────────────────┘
-                       │
-                       ▼
-        ┌──────────────────────────────────────┐
-        │  login_required Decorator (Backend)  │
-        │  • Verifies token validity           │
-        │  • Checks role-based permissions     │
-        │  • OPTIONS pass-through for CORS     │
-        └──────────────────────────────────────┘
-</pre>
+                    <div class="content-inner diagram-container">
+                        <span class="loading-text">Rendering diagram...</span>
+                        <textarea class="plantuml-code" style="display:none;">
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontColor #f8fafc
+skinparam sequence {
+    ParticipantBackgroundColor #0f172a
+    ParticipantBorderColor #ff8c00
+    ParticipantFontColor white
+    LifeLineBorderColor #00fa9a
+    ArrowColor #00fa9a
+}
+
+actor User #ff8c00
+participant "Frontend UI" as UI
+participant "Backend (/login)" as API
+participant "Database" as DB
+
+User -> UI: Enter Credentials
+UI -> API: POST /login (username, pwd)
+activate API
+API -> DB: Fetch User Record & Hash
+activate DB
+DB --> API: Return Hash & Role
+deactivate DB
+API -> API: bcrypt.checkpw()
+API -> API: Generate JWT Token (PyJWT)
+API --> UI: { token, role, success }
+deactivate API
+UI -> UI: Store in localStorage
+UI -> User: Redirect to Dashboard
+@enduml
+                        </textarea>
                     </div>
                 </div>
             </div>
 
             <div class="accordion-item">
                 <button class="accordion-header">
-                    <span>📡 Data Flow Example: Creating a Student</span>
+                    <span>📡 4. Data Flow: Creating a Student (Sequence Diagram)</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="accordion-content">
-                    <div class="content-inner">
-<pre>
-Frontend (UI) → API Call → Backend Route → DB Query → Response → UI Update
-   │                              │
-   └──> Fetch to /api/students   │
-        with JWT token            │
-                                  ▼
-                            students.py route
-                            ├─ @login_required
-                            ├─ Validate input
-                            ├─ Hash sensitive data
-                            └─ execute() → MySQL
-                                            │
-                                            ▼
-                                    INSERT student table
-                                    ├─ student table
-                                    ├─ student_category
-                                    └─ caste_community
-                                            │
-                                            ▼
-                                    JSON Response Success
-                                            │
-                                            ▼
-                                    Frontend Toast + Table Update
-</pre>
+                    <div class="content-inner diagram-container">
+                        <span class="loading-text">Rendering diagram...</span>
+                        <textarea class="plantuml-code" style="display:none;">
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontColor #f8fafc
+skinparam sequence {
+    ParticipantBackgroundColor #0f172a
+    ParticipantBorderColor #ff8c00
+    ParticipantFontColor white
+    LifeLineBorderColor #00fa9a
+    ArrowColor #00fa9a
+    BoxBackgroundColor rgba(255,255,255,0.02)
+}
+
+participant "Frontend (api.js)" as UI
+box "Backend (Flask)" 
+participant "Auth Decorator" as Auth
+participant "students.py" as API
+end box
+participant "Database (app/db.py)" as DB
+
+UI -> UI: Intercept Fetch Request\nInject 'Authorization: Bearer <token>'
+UI -> Auth: POST /api/students (JSON)
+activate Auth
+Auth -> Auth: Validate JWT & Role Permissions
+Auth -> API: Pass Request (if valid)
+deactivate Auth
+activate API
+API -> API: Validate Inputs & Hash sensitive data
+API -> DB: execute(INSERT INTO student...)
+activate DB
+DB --> API: Returns success confirmation
+deactivate DB
+API --> UI: 201 Created (JSON Response)
+deactivate API
+UI -> UI: Show Success Toast
+UI -> UI: Refresh Data Table
+@enduml
+                        </textarea>
                     </div>
                 </div>
             </div>
 
             <div class="accordion-item">
                 <button class="accordion-header">
-                    <span>🛠️ Technology Stack Summary</span>
+                    <span>🛠️ 5. Technology Stack Summary</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="accordion-content">
@@ -563,12 +439,8 @@ Frontend (UI) → API Call → Backend Route → DB Query → Response → UI Up
                                 <tr><td><strong>Database</strong></td><td>MySQL (XAMPP)</td></tr>
                                 <tr><td><strong>Authentication</strong></td><td>JWT (PyJWT), bcrypt</td></tr>
                                 <tr><td><strong>HTTP Client</strong></td><td>Fetch API (browser)</td></tr>
-                                <tr><td><strong>AI</strong></td><td>Ollama (local) / Google Gemini (cloud)</td></tr>
-                                <tr><td><strong>Reporting</strong></td><td>ReportLab, OpenPyxl</td></tr>
-                                <tr><td><strong>Port (Frontend)</strong></td><td>8000</td></tr>
-                                <tr><td><strong>Port (Backend)</strong></td><td>5000</td></tr>
-                                <tr><td><strong>Port (Database)</strong></td><td>3306</td></tr>
-                                <tr><td><strong>Port (Ollama)</strong></td><td>11434</td></tr>
+                                <tr><td><strong>AI Engine</strong></td><td>Ollama (local) / Google Gemini (cloud)</td></tr>
+                                <tr><td><strong>Reporting</strong></td><td>ReportLab (PDF), OpenPyxl (Excel)</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -578,10 +450,35 @@ Frontend (UI) → API Call → Backend Route → DB Query → Response → UI Up
     </div>
 
     <script>
+        // PlantUML Rendering Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const codeBlocks = document.querySelectorAll('.plantuml-code');
+            
+            codeBlocks.forEach(block => {
+                const text = block.value;
+                const container = block.parentElement;
+                
+                // Use the encoder library we imported in the <head>
+                const encoded = plantumlEncoder.encode(text);
+                const url = `https://www.plantuml.com/plantuml/svg/${encoded}`;
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = "PlantUML Diagram";
+                
+                // Once loaded, remove the loading text and textarea, insert image
+                img.onload = () => {
+                    container.innerHTML = ''; 
+                    container.appendChild(img);
+                };
+            });
+        });
+
+        // Accordion Animation Logic
         document.querySelectorAll('.accordion-header').forEach(button => {
             button.addEventListener('click', () => {
                 const accordionContent = button.nextElementSibling;
-                const icon = button.querySelector('.icon');
                 
                 // Toggle active class on button
                 button.classList.toggle('active');
@@ -593,16 +490,6 @@ Frontend (UI) → API Call → Backend Route → DB Query → Response → UI Up
                     // Collapse
                     accordionContent.style.maxHeight = "0";
                 }
-
-                // Optional: Close other open accordions (uncomment if you want standard accordion behavior)
-                /*
-                document.querySelectorAll('.accordion-header').forEach(otherButton => {
-                    if (otherButton !== button && otherButton.classList.contains('active')) {
-                        otherButton.classList.remove('active');
-                        otherButton.nextElementSibling.style.maxHeight = "0";
-                    }
-                });
-                */
             });
         });
     </script>
