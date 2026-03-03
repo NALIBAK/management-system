@@ -94,11 +94,6 @@ def add_student():
          data.get("student_category", "regular"), data.get("caste_community"),
          data.get("admission_date"), data.get("status", "active")))
 
-    # Create user account for student (optional)
-    if data.get("create_account"):
-        execute("""INSERT INTO user_account (username, password_hash, role_id, ref_id, ref_type, is_active)
-                   SELECT %s, %s, role_id, %s, 'student', 1 FROM role WHERE role_name='student'""",
-                (data["reg_number"], hash_password(data.get("password", data["reg_number"])), sid))
     log_activity(request.current_user["user_id"], "create", "student", sid, f"Added student {data['name']}")
     return success({"student_id": sid}, "Student added", 201)
 

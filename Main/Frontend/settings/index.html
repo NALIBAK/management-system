@@ -161,8 +161,11 @@
     <script src="../assets/js/aira.js"></script>
     <script>
         auth.requireAuth();
+        if (!auth.hasRole('super_admin', 'admin')) {
+            window.location.href = '../dashboard.html';
+        }
         renderSidebar('settings');
-        renderHeader('Settings', 'System configuration');
+        renderHeader('System Settings', 'Configure global application parameters');
 
         function switchTab(tab) {
             ['llm', 'college', 'password'].forEach(t => {

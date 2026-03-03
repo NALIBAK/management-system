@@ -22,6 +22,7 @@ def create_app():
     from app.routes.reports import reports_bp
     from app.routes.aira import aira_bp
     from app.routes.notifications import notifications_bp
+    from app.routes.users import users_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(college_bp, url_prefix="/api/college")
@@ -35,6 +36,7 @@ def create_app():
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
     app.register_blueprint(aira_bp, url_prefix="/api/aira")
     app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+    app.register_blueprint(users_bp, url_prefix="/api/users")
 
     @app.route("/api/health")
     def health():

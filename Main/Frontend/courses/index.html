@@ -163,6 +163,9 @@
     <script src="../assets/js/aira.js"></script>
     <script>
         auth.requireAuth();
+        if (!auth.hasRole('super_admin', 'admin')) {
+            window.location.href = '../dashboard.html';
+        }
         renderSidebar('courses');
         renderHeader('Courses & Subjects', 'Manage academic courses and subjects');
 

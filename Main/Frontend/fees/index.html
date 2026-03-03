@@ -223,8 +223,11 @@
     <script src="../assets/js/aira.js"></script>
     <script>
         auth.requireAuth();
+        if (!auth.hasRole('super_admin', 'admin')) {
+            window.location.href = '../dashboard.html';
+        }
         renderSidebar('fees');
-        renderHeader('Fees', 'Manage fee payments and scholarships');
+        renderHeader('Fee Management', 'Manage fee structures and payments');
 
         function switchTab(tab) {
             ['payments', 'balance', 'structures', 'scholarships'].forEach(t => {

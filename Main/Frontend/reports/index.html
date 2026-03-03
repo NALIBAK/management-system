@@ -160,8 +160,11 @@
     <script src="../assets/js/aira.js"></script>
     <script>
         auth.requireAuth();
+        if (!auth.hasRole('super_admin', 'admin', 'hod')) {
+            window.location.href = '../dashboard.html';
+        }
         renderSidebar('reports');
-        renderHeader('Reports', 'Generate and export reports');
+        renderHeader('Reports & Analytics', 'Generate insights from system data');
 
         let currentReport = null;
         let currentData = [];

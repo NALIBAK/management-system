@@ -60,6 +60,12 @@
                     <label class="form-label">Code</label>
                     <input type="text" id="dept-code" class="form-control">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Head of Department (HOD)</label>
+                    <select id="dept-hod" class="form-control">
+                        <option value="">-- Select HOD --</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="utils.closeModal('dept-modal')">Cancel</button>
@@ -76,19 +82,31 @@
     <script src="../assets/js/aira.js"></script>
     <script>
         auth.requireAuth();
+        if (!auth.hasRole('super_admin', 'admin')) {
+            window.location.href = '../dashboard.html';
+        }
         renderSidebar('departments');
         renderHeader('Departments', 'Manage departments');
 
         async function load() {
-            const res = await api.get('/college/departments');
-            if (res?.ok) {
-                utils.renderTable('dept-tbody', res.data.data || [], d => `
+            const [deptRes, staffRes] = await Promise.all([
+                api.get('/college/departments'),
+                api.get('/staff')
+            ]);
+
+            if (staffRes?.ok) {
+                const staffList = staffRes.data.data || [];
+                utils.populateSelect('dept-hod', staffList, 'staff_id', 'name', '-- Select HOD --');
+            }
+
+            if (deptRes?.ok) {
+                utils.renderTable('dept-tbody', deptRes.data.data || [], d => `
         <tr>
           <td>${d.code || '—'}</td>
           <td><strong>${d.name}</strong></td>
           <td>${d.hod_name || '—'}</td>
           <td>
-            <button class="btn btn-ghost btn-sm" onclick="editDept(${d.department_id},'${d.name}','${d.code || ''}')">✏️ Edit</button>
+            <button class="btn btn-ghost btn-sm" onclick="editDept(${d.department_id},'${d.name}','${d.code || ''}', '${d.hod_staff_id || ''}')">✏️ Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deleteDept(${d.department_id})">🗑️</button>
           </td>
         </tr>`);
@@ -99,21 +117,27 @@
             document.getElementById('dept-id').value = '';
             document.getElementById('dept-name').value = '';
             document.getElementById('dept-code').value = '';
+            document.getElementById('dept-hod').value = '';
             document.getElementById('modal-title').textContent = 'Add Department';
             utils.openModal('dept-modal');
         }
 
-        function editDept(id, name, code) {
+        function editDept(id, name, code, hod_staff_id) {
             document.getElementById('dept-id').value = id;
             document.getElementById('dept-name').value = name;
             document.getElementById('dept-code').value = code;
+            document.getElementById('dept-hod').value = (hod_staff_id && hod_staff_id !== 'null') ? hod_staff_id : '';
             document.getElementById('modal-title').textContent = 'Edit Department';
             utils.openModal('dept-modal');
         }
 
         async function saveDept() {
             const id = document.getElementById('dept-id').value;
-            const data = { name: document.getElementById('dept-name').value, code: document.getElementById('dept-code').value };
+            const data = {
+                name: document.getElementById('dept-name').value,
+                code: document.getElementById('dept-code').value,
+                hod_staff_id: document.getElementById('dept-hod').value || null
+            };
             const res = id ? await api.put(`/college/departments/${id}`, data) : await api.post('/college/departments', data);
             if (res?.ok) { utils.toast('Saved!', 'success'); utils.closeModal('dept-modal'); load(); }
             else utils.toast(res?.data?.message || 'Failed', 'error');

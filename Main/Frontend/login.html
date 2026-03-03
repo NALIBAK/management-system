@@ -117,8 +117,15 @@
 
         <div class="form-group">
           <label class="form-label" for="password">Password <span class="required">*</span></label>
-          <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password"
-            autocomplete="current-password" required>
+          <div style="position: relative;">
+            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password"
+              autocomplete="current-password" required style="padding-right: 45px;">
+            <button type="button" id="toggle-password"
+              style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted);"
+              title="Toggle password visibility">
+              👁️
+            </button>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary login-btn" id="login-btn">
@@ -138,6 +145,19 @@
   <script>
     // Redirect if already logged in
     auth.requireGuest();
+
+    const togglePassword = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('password');
+
+    togglePassword.addEventListener('click', function () {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        this.textContent = '🙈';
+      } else {
+        passwordInput.type = 'password';
+        this.textContent = '👁️';
+      }
+    });
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();

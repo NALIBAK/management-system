@@ -141,8 +141,41 @@
         auth.requireAuth();
 
         const user = auth.getUser();
+        const role = user?.role || '';
+        const isAdmin = ['super_admin', 'admin'].includes(role);
         document.getElementById('user-name').textContent = user?.username || '';
         document.getElementById('user-avatar').textContent = auth.getUserInitials();
+
+        // --- Role-based UI visibility ---
+        // Hide Settings sidebar link for non-admins
+        if (!isAdmin) {
+            document.querySelectorAll('.sidebar-nav a').forEach(a => {
+                if (a.href.includes('settings/')) a.style.display = 'none';
+            });
+            // Also hide the "System" section label if settings is the only link
+            document.querySelectorAll('.nav-section-label').forEach(label => {
+                if (label.textContent.trim() === 'System') label.style.display = 'none';
+            });
+        }
+
+        // Hide admin-only Quick Action buttons for Staff/HOD
+        if (!isAdmin) {
+            const quickBtns = document.querySelectorAll('.card-body a.btn');
+            quickBtns.forEach(btn => {
+                const text = btn.textContent.trim();
+                if (text.includes('Add Student') || text.includes('Add Staff') || text.includes('Record Payment')) {
+                    btn.style.display = 'none';
+                }
+            });
+        }
+
+        // Update stat labels for scoped roles
+        if (!isAdmin) {
+            document.querySelectorAll('.stat-label').forEach(label => {
+                if (label.textContent === 'Total Students') label.textContent = 'My Students';
+                if (label.textContent === 'Total Staff') label.textContent = 'Dept Staff';
+            });
+        }
 
         async function loadDashboard() {
             // Load department summary

@@ -1,0 +1,24 @@
+// AIRA System Architecture
+digraph {
+	rankdir=TB size="8,8"
+	node [fillcolor=lightblue fontname=Helvetica shape=box style=filled]
+	Client [label="Client / Frontend
+(Admin/Faculty)" fillcolor=lightgrey]
+	API [label="RESTful API Gateway
+(JWT Authentication)" fillcolor=lightyellow]
+	RBAC [label="RBAC Interceptor Engine
+(Role & Dept Validation)" fillcolor=lightcoral]
+	AIRA [label="AIRA Multi-Agent AI
+(Context-Aware Prompting)" fillcolor=lightgreen]
+	Automator [label="Workflow & Report Automator
+(PDF Generation)" fillcolor=lightgreen]
+	DB [label="Relational Database
+(SQL)" fillcolor=orange shape=cylinder]
+	Client -> API [label=" NL Query + Token"]
+	API -> RBAC [label=" Verify Payload"]
+	RBAC -> AIRA [label=" Authorized (Inject Schema)"]
+	AIRA -> RBAC [label=" Generated SQL"]
+	RBAC -> DB [label=" Execute Validated Query"]
+	DB -> Automator [label=" Raw Data Array"]
+	Automator -> Client [label=" Formatted PDF & AI Summary"]
+}

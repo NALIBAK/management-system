@@ -109,12 +109,6 @@
                                 <textarea id="address" class="form-control" rows="2"></textarea>
                             </div>
 
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="create-account" checked> Create Login Account?
-                                </label>
-                            </div>
-
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary" id="save-btn">Save Student</button>
                             </div>
@@ -183,9 +177,6 @@
                 document.getElementById('batch-id').value = s.batch_id;
                 await loadSections();
                 document.getElementById('section-id').value = s.section_id;
-
-                document.getElementById('create-account').checked = false;
-
                 if (isView) {
                     Array.from(document.forms[0].elements).forEach(e => e.disabled = true);
                     document.getElementById('save-btn').style.display = 'none';
@@ -211,9 +202,7 @@
                 batch_id: document.getElementById('batch-id').value,
                 section_id: document.getElementById('section-id').value,
                 student_category: document.getElementById('student-category').value,
-                caste_community: document.getElementById('caste-community').value || null,
-                create_account: document.getElementById('create-account').checked,
-                password: 'password123'
+                caste_community: document.getElementById('caste-community').value || null
             };
 
             const res = studentId
