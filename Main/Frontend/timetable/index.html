@@ -32,11 +32,16 @@
             font-size: 12px;
             cursor: pointer;
             transition: var(--transition);
+            position: relative;
+            /* For delete button positioning */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .tt-cell:hover {
             border-color: var(--accent);
-            background: var(--accent-light);
+            background: var(--bg-secondary);
         }
 
         .tt-cell.filled {
@@ -57,6 +62,35 @@
         .tt-cell .room {
             color: var(--text-muted);
             font-size: 11px;
+            margin-top: auto;
+        }
+
+        .tt-delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: none;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: var(--transition);
+        }
+
+        .tt-cell:hover .tt-delete-btn {
+            display: flex;
+        }
+
+        .tt-delete-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
         }
 
         .tt-period-label {
@@ -205,9 +239,19 @@
             const res = await api.get('/timetable/', { section_id: sectionId });
             const entries = res?.data?.data || [];
 
-            // Build grid
             const ttBody = document.getElementById('tt-body');
             ttBody.innerHTML = '';
+
+            if (entries.length === 0) {
+                ttBody.innerHTML = `
+                    <div id="tt-empty-state" style="text-align:center;padding:40px 20px;color:var(--text-muted)">
+                        <div style="font-size:48px;margin-bottom:12px">📋</div>
+                        <div style="font-size:16px;font-weight:600;margin-bottom:4px">No timetable entries</div>
+                        <div style="font-size:13px">Click "Add Entry" to build the timetable.</div>
+                    </div>`;
+                return;
+            }
+
             periods.forEach(p => {
                 const row = document.createElement('div');
                 row.className = 'tt-grid';
@@ -218,11 +262,28 @@
                     const cell = document.createElement('div');
                     cell.className = `tt-cell ${entry ? 'filled' : ''}`;
                     if (entry) {
-                        cell.innerHTML = `<div class="subject">${entry.subject_name}</div><div class="staff">${entry.staff_name}</div><div class="room">${entry.room_name || ''}</div>`;
+                        cell.innerHTML = `
+                            <button class="tt-delete-btn" onclick="deleteTTEntry(${entry.timetable_id})" title="Delete entry">✕</button>
+                            <div class="subject">${entry.subject_name}</div>
+                            <div class="staff">${entry.staff_name}</div>
+                            <div class="room">${entry.room_name || ''}</div>
+                        `;
                     }
                     row.appendChild(cell);
                 });
                 ttBody.appendChild(row);
+            });
+        }
+
+        async function deleteTTEntry(id) {
+            utils.confirm('Delete this timetable entry?', async () => {
+                const res = await api.delete(`/timetable/${id}`);
+                if (res?.ok) {
+                    utils.toast('Entry deleted', 'success');
+                    loadTimetable();
+                } else {
+                    utils.toast(res?.data?.message || 'Failed to delete', 'error');
+                }
             });
         }
 

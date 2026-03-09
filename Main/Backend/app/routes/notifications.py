@@ -22,7 +22,7 @@ def create_template():
     tid = execute("""INSERT INTO notification_template (staff_id, title, content_template, channel_type)
                      VALUES (%s,%s,%s,%s)""",
                   (user.get("ref_id"), data["title"], data["content_template"],
-                   data.get("channel_type", "email")))
+                   data.get("channel_type", "whatsapp")))
     return success({"template_id": tid}, "Template created", 201)
 
 @notifications_bp.route("/templates/<int:template_id>", methods=["PUT"])
@@ -30,7 +30,7 @@ def create_template():
 def update_template(template_id):
     data = request.get_json()
     execute("UPDATE notification_template SET title=%s, content_template=%s, channel_type=%s WHERE template_id=%s",
-            (data["title"], data["content_template"], data.get("channel_type", "email"), template_id))
+            (data["title"], data["content_template"], data.get("channel_type", "whatsapp"), template_id))
     return success(message="Template updated")
 
 @notifications_bp.route("/templates/<int:template_id>", methods=["DELETE"])
@@ -50,7 +50,7 @@ def send_notification():
     data = request.get_json()
     user = request.current_user
     student_ids = data.get("student_ids", [])
-    channel_type = data.get("channel_type", "email")
+    channel_type = data.get("channel_type", "whatsapp")
     custom_message = data.get("custom_message", "")
     template_id = data.get("template_id")
 
@@ -113,9 +113,8 @@ def send_notification():
             else:
                 failures.append(f"{student.get('name')}: No guardian phone number")
         else:
-            # Mock email/SMS for now, assume success
-            delivery_status = 'sent'
-            sent_count += 1
+            delivery_status = 'failed'
+            failures.append(f"{student.get('name')}: Unsupported channel type {channel_type}")
 
         # Log the notification
         execute("""INSERT INTO notification_log (student_id, sender_staff_id, channel_type, message_content, status)
