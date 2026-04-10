@@ -48,8 +48,12 @@
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Model</label>
-                                        <input type="text" name="selected_model" class="form-control" id="llm-model"
-                                            placeholder="e.g. gemma3:1b, gemini-1.5-flash">
+                                        <div id="model-select-container">
+                                            <select name="selected_model" class="form-control" id="llm-model">
+                                                <option value="">Loading models...</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-hint" id="model-hint">Fetching models from local Ollama...</div>
                                     </div>
                                 </div>
                                 <div class="form-group" id="api-key-group">
@@ -71,14 +75,11 @@
                                     </div>
                                 </div>
                                 <div class="alert alert-info">
-                                    ℹ️ For Ollama, make sure Ollama is running locally at
-                                    <code>http://localhost:11434</code>. Pull a model with
-                                    <code>ollama pull gemma3:1b</code>.
+                                    ℹ️ <b>Resource Protection:</b> AIRA now caps context to 4096 tokens and limits history to the last 5 messages for stability.
                                 </div>
-                                <button type="button" class="btn btn-primary" onclick="saveLLMConfig()">💾 Save LLM
-                                    Config</button>
-                                <button type="button" class="btn btn-ghost" onclick="testLLM()">🧪 Test
-                                    Connection</button>
+                                <div id="connection-test-result" style="display:none; margin-bottom: 15px;"></div>
+                                <button type="button" class="btn btn-primary" onclick="saveLLMConfig()">💾 Save LLM Config</button>
+                                <button type="button" class="btn btn-ghost" onclick="testLLM()">🧪 Test Full Stack</button>
                             </form>
                         </div>
                     </div>
@@ -227,23 +228,70 @@
             if (tab === 'whatsapp') loadWhatsAppStatus();
         }
 
-        function toggleApiKey() {
+        async function fetchOllamaModels() {
+            const hintEl = document.getElementById('model-hint');
+            const selectEl = document.getElementById('llm-model');
             const provider = document.getElementById('llm-provider').value;
-            document.getElementById('api-key-group').style.display = provider === 'ollama' ? 'none' : '';
-            const models = { ollama: 'gemma3:1b', gemini: 'gemini-1.5-flash', openai: 'gpt-4o-mini' };
-            document.getElementById('llm-model').placeholder = `e.g. ${models[provider] || 'model-name'}`;
+
+            if (provider !== 'ollama') {
+                hintEl.textContent = 'Enter the model name for your provider.';
+                // Replace select with input if not already
+                if (selectEl.tagName === 'SELECT') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = 'selected_model';
+                    input.className = 'form-control';
+                    input.id = 'llm-model';
+                    input.placeholder = provider === 'gemini' ? 'e.g. gemini-1.5-flash' : 'e.g. gpt-4o-mini';
+                    selectEl.parentNode.replaceChild(input, selectEl);
+                }
+                return;
+            }
+
+            // Restore select if it was replaced
+            if (selectEl.tagName === 'INPUT') {
+                const select = document.createElement('select');
+                select.name = 'selected_model';
+                select.className = 'form-control';
+                select.id = 'llm-model';
+                selectEl.parentNode.replaceChild(select, selectEl);
+            }
+
+            const select = document.getElementById('llm-model');
+            select.innerHTML = '<option value="">Loading models...</option>';
+            hintEl.textContent = 'Fetching available models from Ollama...';
+
+            const res = await api.get('/aira/ollama-models');
+            if (res?.ok && res.data.data.models) {
+                const models = res.data.data.models;
+                select.innerHTML = models.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+                hintEl.textContent = `Found ${models.length} models in local Ollama.`;
+            } else {
+                select.innerHTML = '<option value="gemma3:1b">gemma3:1b (Fallback)</option>';
+                hintEl.textContent = '❌ Could not reach Ollama. Ensure it is running on port 11434.';
+                utils.toast('Ollama offline or Not found', 'warning');
+            }
         }
 
         async function init() {
             const [llmRes, colRes] = await Promise.all([api.get('/aira/config'), api.get('/college/')]);
+            
+            // First setup the provider and fetch models
             if (llmRes?.ok && llmRes.data.data) {
                 const c = llmRes.data.data;
                 document.getElementById('llm-provider').value = c.provider || 'ollama';
-                document.getElementById('llm-model').value = c.selected_model || '';
+                await fetchOllamaModels(); // Wait for models to load
+                
+                const modelEl = document.getElementById('llm-model');
+                modelEl.value = c.selected_model || '';
+                
                 document.getElementById('llm-temp').value = c.temperature || 0.7;
                 document.getElementById('llm-tokens').value = c.max_tokens || 2048;
                 toggleApiKey();
+            } else {
+                await fetchOllamaModels();
             }
+
             if (colRes?.ok && colRes.data.data?.length) {
                 const col = colRes.data.data[0];
                 document.getElementById('college-name').value = col.name || '';
@@ -262,10 +310,32 @@
         }
 
         async function testLLM() {
-            utils.toast('Testing connection...', 'info');
+            const resultEl = document.getElementById('connection-test-result');
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<div class="alert alert-info">🧪 Testing full stack connection...</div>';
+            
             const res = await api.get('/aira/test');
-            if (res?.ok) utils.toast('✅ Connection successful!', 'success');
-            else utils.toast('❌ Connection failed. Check your config.', 'error');
+            if (res?.ok) {
+                const data = res.data.data;
+                if (data.status === 'ok') {
+                    resultEl.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+                    utils.toast('Connection Perfect!', 'success');
+                } else {
+                    resultEl.innerHTML = `
+                        <div class="alert alert-warning">
+                            <b>⚠️ Partial Success:</b> ${data.message}<br>
+                            <small>Try pulling the model: <code>ollama pull ${document.getElementById('llm-model').value}</code></small>
+                        </div>`;
+                }
+            } else {
+                resultEl.innerHTML = `<div class="alert alert-danger">❌ ${res?.data?.message || 'Connection failed. Is Ollama running?'}</div>`;
+            }
+        }
+
+        function toggleApiKey() {
+            const provider = document.getElementById('llm-provider').value;
+            document.getElementById('api-key-group').style.display = provider === 'ollama' ? 'none' : '';
+            fetchOllamaModels();
         }
 
         async function saveCollege() {

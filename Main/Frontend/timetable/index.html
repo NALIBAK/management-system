@@ -22,65 +22,90 @@
             font-size: 13px;
             border-radius: var(--radius-sm);
         }
-
         .tt-cell {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             padding: 8px;
-            min-height: 70px;
-            font-size: 12px;
+            min-height: 85px;
+            font-size: 11px;
             cursor: pointer;
             transition: var(--transition);
             position: relative;
-            /* For delete button positioning */
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        .tt-cell:hover {
+        .tt-cell.empty {
+            border-style: dashed;
+            background: rgba(0,0,0,0.02);
+            opacity: 0.6;
+        }
+
+        .tt-cell.empty:hover {
+            border-style: solid;
             border-color: var(--accent);
-            background: var(--bg-secondary);
+            background: var(--accent-light);
+            opacity: 1;
+        }
+
+        .tt-cell.empty::after {
+            content: "+";
+            font-size: 20px;
+            color: var(--text-muted);
+            text-align: center;
+            display: block;
         }
 
         .tt-cell.filled {
-            background: var(--accent-light);
-            border-color: var(--accent);
+            background: var(--bg-card);
+            border-left: 4px solid var(--accent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tt-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        body.dark-mode .tt-cell.empty {
+            background: rgba(255,255,255,0.02);
         }
 
         .tt-cell .subject {
             font-weight: 700;
             color: var(--accent);
+            font-size: 12px;
+            margin-bottom: 4px;
         }
 
-        .tt-cell .staff {
-            color: var(--text-muted);
-            margin-top: 2px;
+        .tt-cell .meta-info {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-bottom: 2px;
         }
 
         .tt-cell .room {
             color: var(--text-muted);
-            font-size: 11px;
-            margin-top: auto;
+            font-size: 10px;
         }
 
         .tt-delete-btn {
             position: absolute;
             top: 4px;
             right: 4px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--danger);
-            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background: var(--danger-light);
+            color: var(--danger);
             border: none;
             display: none;
             align-items: center;
             justify-content: center;
             font-size: 10px;
             cursor: pointer;
-            opacity: 0.8;
             transition: var(--transition);
         }
 
@@ -88,18 +113,21 @@
             display: flex;
         }
 
-        .tt-delete-btn:hover {
-            opacity: 1;
-            transform: scale(1.1);
-        }
-
         .tt-period-label {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            padding: 8px;
             font-weight: 600;
+        }
+        
+        .tt-period-label small {
+            font-size: 10px;
             color: var(--text-muted);
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -118,41 +146,47 @@
             <main class="page-content">
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="flex gap-3 items-center" style="flex-wrap:wrap">
-                            <div class="form-group" style="margin:0;min-width:200px">
-                                <select class="form-control" id="tt-section" onchange="loadTimetable()">
+                        <div class="flex gap-4 items-center" style="flex-wrap:wrap">
+                            <div class="form-group" style="margin:0;min-width:220px">
+                                <label class="form-label" style="font-size:11px;margin-bottom:4px">View by Section</label>
+                                <select class="form-control" id="tt-section" onchange="switchFilter('section')">
                                     <option value="">Select Section</option>
                                 </select>
                             </div>
-                            <button class="btn btn-primary" onclick="utils.openModal('add-tt-modal')">➕ Add
-                                Entry</button>
+                            <div class="form-group" style="margin:0;min-width:220px">
+                                <label class="form-label" style="font-size:11px;margin-bottom:4px">View by Staff</label>
+                                <select class="form-control" id="tt-staff-filter" onchange="switchFilter('staff')">
+                                    <option value="">Select Staff Member</option>
+                                </select>
+                            </div>
+                            <div style="flex-grow:1"></div>
+                            <button class="btn btn-primary" onclick="openAddModal()">➕ Add Entry</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header flex justify-between items-center">
                         <h3 class="card-title">🗓️ Weekly Timetable</h3>
+                        <div id="active-filter-label" class="badge badge-info">Select a filter</div>
                     </div>
                     <div class="card-body" style="overflow-x:auto">
-                        <div class="tt-grid" id="tt-grid">
+                        <div class="tt-grid" id="tt-grid-header">
                             <div></div>
-                            <div class="tt-header">Mon</div>
-                            <div class="tt-header">Tue</div>
-                            <div class="tt-header">Wed</div>
-                            <div class="tt-header">Thu</div>
-                            <div class="tt-header">Fri</div>
-                            <div class="tt-header">Sat</div>
-                            <div class="tt-header">Sun</div>
+                            <div class="tt-header">MONDAY</div>
+                            <div class="tt-header">TUESDAY</div>
+                            <div class="tt-header">WEDNESDAY</div>
+                            <div class="tt-header">THURSDAY</div>
+                            <div class="tt-header">FRIDAY</div>
+                            <div class="tt-header">SATURDAY</div>
+                            <div class="tt-header">SUNDAY</div>
                         </div>
                         <div id="tt-body" style="margin-top:4px">
                             <div id="tt-empty-state"
-                                style="text-align:center;padding:40px 20px;color:var(--text-muted)">
+                                style="text-align:center;padding:60px 20px;color:var(--text-muted)">
                                 <div style="font-size:48px;margin-bottom:12px">📋</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:4px">No timetable to display
-                                </div>
-                                <div style="font-size:13px">Select a section from the dropdown above to view the weekly
-                                    timetable.</div>
+                                <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-main)">Timetable Explorer</div>
+                                <div style="font-size:14px;max-width:400px;margin:0 auto">Select either a <b>Section</b> or a <b>Staff Member</b> from the filters above to view the schedule.</div>
                             </div>
                         </div>
                     </div>
@@ -172,25 +206,30 @@
                 <div class="form-row">
                     <div class="form-group"><label class="form-label">Day</label>
                         <select id="tt-day" class="form-control">
-                            <option>Monday</option>
-                            <option>Tuesday</option>
-                            <option>Wednesday</option>
-                            <option>Thursday</option>
-                            <option>Friday</option>
-                            <option>Saturday</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
                         </select>
                     </div>
                     <div class="form-group"><label class="form-label">Period</label><select id="tt-period"
                             class="form-control"></select></div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group"><label class="form-label">Section</label><select id="modal-section"
+                            class="form-control"></select></div>
                     <div class="form-group"><label class="form-label">Subject</label><select id="tt-subject"
                             class="form-control"></select></div>
-                    <div class="form-group"><label class="form-label">Staff</label><select id="tt-staff"
-                            class="form-control"></select></div>
                 </div>
-                <div class="form-group"><label class="form-label">Room</label><select id="tt-room"
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Staff Member</label><select id="tt-staff"
+                            class="form-control"></select></div>
+                    <div class="form-group"><label class="form-label">Room</label><select id="tt-room"
                         class="form-control"></select></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="utils.closeModal('add-tt-modal')">Cancel</button>
@@ -211,7 +250,7 @@
         renderHeader('Timetable', 'View and manage class timetables');
 
         const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        let periods = [], currentAY = null;
+        let periods = [], currentAY = null, activeMode = 'section';
 
         async function init() {
             const [sectRes, perRes, subRes, staffRes, roomRes, ayRes] = await Promise.all([
@@ -222,52 +261,97 @@
                 api.get('/timetable/rooms'),
                 api.get('/college/academic-years')
             ]);
-            if (sectRes?.ok) utils.populateSelect('tt-section', sectRes.data.data || [], 'section_id', s => `${s.course_name} - ${s.name}`, 'Select Section');
+            
+            if (sectRes?.ok) {
+                const sections = sectRes.data.data || [];
+                utils.populateSelect('tt-section', sections, 'section_id', s => `${s.course_name} - ${s.name}`, 'Select Section');
+                utils.populateSelect('modal-section', sections, 'section_id', s => `${s.course_name} - ${s.name}`, 'Select Section');
+            }
             if (perRes?.ok) {
                 periods = perRes.data.data || [];
                 utils.populateSelect('tt-period', periods, 'period_id', p => `${p.label} (${p.start_time})`, 'Select Period');
             }
             if (subRes?.ok) utils.populateSelect('tt-subject', subRes.data.data || [], 'subject_id', 'name', 'Select Subject');
-            if (staffRes?.ok) utils.populateSelect('tt-staff', staffRes.data.data || [], 'staff_id', 'name', 'Select Staff');
+            if (staffRes?.ok) {
+                const staff = staffRes.data.data || [];
+                utils.populateSelect('tt-staff-filter', staff, 'staff_id', 'name', 'Select Staff Member');
+                utils.populateSelect('tt-staff', staff, 'staff_id', 'name', 'Select Staff Member');
+            }
             if (roomRes?.ok) utils.populateSelect('tt-room', roomRes.data.data || [], 'room_id', 'name', 'Select Room');
             if (ayRes?.ok) currentAY = (ayRes.data.data || []).find(a => a.is_current) || ayRes.data.data?.[0];
         }
 
+        function switchFilter(mode) {
+            activeMode = mode;
+            if (mode === 'section') {
+                document.getElementById('tt-staff-filter').value = '';
+                document.getElementById('active-filter-label').textContent = 'Viewing by Section';
+            } else {
+                document.getElementById('tt-section').value = '';
+                document.getElementById('active-filter-label').textContent = 'Viewing by Staff';
+            }
+            loadTimetable();
+        }
+
+        function openAddModal(day = null, periodId = null) {
+            if (day) document.getElementById('tt-day').value = day;
+            if (periodId) document.getElementById('tt-period').value = periodId;
+            
+            // Auto-fill from active filters
+            const sectionVal = document.getElementById('tt-section').value;
+            if (sectionVal) document.getElementById('modal-section').value = sectionVal;
+            
+            const staffVal = document.getElementById('tt-staff-filter').value;
+            if (staffVal) document.getElementById('tt-staff').value = staffVal;
+
+            utils.openModal('add-tt-modal');
+        }
+
         async function loadTimetable() {
             const sectionId = document.getElementById('tt-section').value;
-            if (!sectionId) return;
-            const res = await api.get('/timetable/', { section_id: sectionId });
-            const entries = res?.data?.data || [];
-
-            const ttBody = document.getElementById('tt-body');
-            ttBody.innerHTML = '';
-
-            if (entries.length === 0) {
-                ttBody.innerHTML = `
-                    <div id="tt-empty-state" style="text-align:center;padding:40px 20px;color:var(--text-muted)">
+            const staffId = document.getElementById('tt-staff-filter').value;
+            
+            if (!sectionId && !staffId) {
+                document.getElementById('tt-body').innerHTML = `
+                    <div id="tt-empty-state" style="text-align:center;padding:60px 20px;color:var(--text-muted)">
                         <div style="font-size:48px;margin-bottom:12px">📋</div>
-                        <div style="font-size:16px;font-weight:600;margin-bottom:4px">No timetable entries</div>
-                        <div style="font-size:13px">Click "Add Entry" to build the timetable.</div>
+                        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-main)">Timetable Explorer</div>
+                        <div style="font-size:14px;max-width:400px;margin:0 auto">Select either a <b>Section</b> or a <b>Staff Member</b> from the filters above to view the schedule.</div>
                     </div>`;
                 return;
             }
+
+            const params = {};
+            if (sectionId) params.section_id = sectionId;
+            if (staffId) params.staff_id = staffId;
+            
+            const res = await api.get('/timetable/', params);
+            const entries = res?.data?.data || [];
+            const ttBody = document.getElementById('tt-body');
+            ttBody.innerHTML = '';
 
             periods.forEach(p => {
                 const row = document.createElement('div');
                 row.className = 'tt-grid';
                 row.style.marginBottom = '4px';
-                row.innerHTML = `<div class="tt-period-label">${p.label}<br><small>${p.start_time}</small></div>`;
+                row.innerHTML = `<div class="tt-period-label">${p.label}<small>${p.start_time}</small></div>`;
+                
                 DAYS.forEach(day => {
                     const entry = entries.find(e => e.day_of_week === day && e.period_id === p.period_id);
                     const cell = document.createElement('div');
-                    cell.className = `tt-cell ${entry ? 'filled' : ''}`;
+                    cell.className = `tt-cell ${entry ? 'filled' : 'empty'}`;
+                    
                     if (entry) {
+                        const metaName = activeMode === 'section' ? entry.staff_name : entry.section_name;
                         cell.innerHTML = `
-                            <button class="tt-delete-btn" onclick="deleteTTEntry(${entry.timetable_id})" title="Delete entry">✕</button>
+                            <button class="tt-delete-btn" onclick="event.stopPropagation(); deleteTTEntry(${entry.timetable_id})" title="Delete entry">✕</button>
                             <div class="subject">${entry.subject_name}</div>
-                            <div class="staff">${entry.staff_name}</div>
-                            <div class="room">${entry.room_name || ''}</div>
+                            <div class="meta-info">${metaName}</div>
+                            <div class="room">${entry.room_name || 'No Room'}</div>
                         `;
+                    } else {
+                        cell.setAttribute('onclick', `openAddModal('${day}', ${p.period_id})`);
+                        cell.setAttribute('title', `Click to add entry for ${day} ${p.label}`);
                     }
                     row.appendChild(cell);
                 });
@@ -288,8 +372,9 @@
         }
 
         async function saveTTEntry() {
-            const sectionId = document.getElementById('tt-section').value;
-            if (!sectionId) { utils.toast('Select a section first', 'warning'); return; }
+            const sectionId = document.getElementById('modal-section').value;
+            if (!sectionId) { utils.toast('Section is required', 'warning'); return; }
+            
             const res = await api.post('/timetable/', {
                 section_id: sectionId,
                 subject_id: document.getElementById('tt-subject').value,
@@ -299,7 +384,11 @@
                 day_of_week: document.getElementById('tt-day').value,
                 academic_year_id: currentAY?.academic_year_id
             });
-            if (res?.ok) { utils.toast('Entry added!', 'success'); utils.closeModal('add-tt-modal'); loadTimetable(); }
+            if (res?.ok) { 
+                utils.toast('Entry added!', 'success'); 
+                utils.closeModal('add-tt-modal'); 
+                loadTimetable(); 
+            }
             else utils.toast(res?.data?.message || 'Failed', 'error');
         }
 

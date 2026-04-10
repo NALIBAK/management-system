@@ -4,6 +4,8 @@ from app.utils.auth import login_required
 from app.utils.response import success, error
 import requests as http_requests
 import json
+from app.utils.ai_client import call_ollama_ai, get_selected_model
+
 
 aira_bp = Blueprint("aira", __name__)
 
@@ -1520,18 +1522,9 @@ I didn't find a direct match, but I'm here to help! Here are things I can answer
     except Exception as e:
         return f"⚠️ Sorry, I encountered an error while processing your query: {str(e)}"
 
-def _call_ollama(system_prompt: str, messages: list, model: str = "gemma3:1b") -> str:
-    try:
-        payload = {
-            "model": model,
-            "messages": [{"role": "system", "content": system_prompt}] + messages,
-            "stream": False
-        }
-        resp = http_requests.post("http://localhost:11434/api/chat", json=payload, timeout=120)
-        resp.raise_for_status()
-        return resp.json()["message"]["content"]
-    except Exception as e:
-        return f"Ollama is not available. Please start Ollama or configure a Gemini API key. Error: {str(e)}"
+def _call_ollama(system_prompt: str, messages: list, model: str = None) -> str:
+    return call_ollama_ai(system_prompt, messages, model)
+
 
 def _call_gemini(config: dict, system_prompt: str, messages: list, tools: list, user: dict = None) -> str:
     """Agentic Gemini call with real MCP tool-calling loop (up to 5 iterations)."""
@@ -1646,6 +1639,39 @@ def download_report(filename):
         return error("Report not found", 404)
     return send_from_directory(safe_dir, filename)
 
+
+@aira_bp.route("/ollama-models", methods=["GET"])
+@login_required
+def get_ollama_models():
+    try:
+        resp = http_requests.get("http://localhost:11434/api/tags", timeout=5)
+        return success(resp.json())
+    except Exception as e:
+        return error(f"Could not connect to Ollama: {str(e)}")
+
+@aira_bp.route("/test", methods=["GET"])
+@login_required
+def test_connection():
+    try:
+        ollama_resp = http_requests.get("http://localhost:11434/api/tags", timeout=5)
+        if ollama_resp.status_code != 200:
+            return error("Ollama responded with an error")
+        
+        model = get_selected_model()
+        models = [m["name"] for m in ollama_resp.json().get("models", [])]
+        if model not in models:
+            return success({
+                "status": "partial",
+                "message": f"Ollama is running, but configured model '{model}' is not pulled.",
+                "available_models": models
+            })
+        
+        return success({
+            "status": "ok",
+            "message": f"Full stack verified: Backend -> Ollama -> '{model}' is ready."
+        })
+    except Exception as e:
+        return error(f"Connection test failed: {str(e)}")
 
 @aira_bp.route("/confirm-action", methods=["POST"])
 @login_required
