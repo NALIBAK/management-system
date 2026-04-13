@@ -1218,10 +1218,10 @@ def _smart_fallback(message: str, user: dict, messages: list = None) -> str:
                 return f"📊 **{label} Department Students** ({len(lines)} shown):\n" + "\n".join(lines[:20]) + (f"\n...and {len(lines)-20} more. Ask for a PDF export to see all." if len(lines) > 20 else "")
 
         # Check if user explicitly wants to download/export a report file
-        is_export = any(k in msg for k in ["download", "export", "generate file", "create pdf", "create excel", "save report", "as a pdf", "as pdf", "pdf file", "in pdf", "pdf format", "excel file", "in excel"])
+        is_export = any(k in msg for k in ["download", "export", "generate file", "create pdf", "create excel", "save report", "as a pdf", "as pdf", "pdf file", "in pdf", "pdf format", "excel file", "in excel", "as excel"])
         
         # Also treat it as an export if the user just says "pdf", "excel", "download it"
-        if not is_export and (msg == "pdf" or msg == "excel" or msg == "download" or "need pdf" in msg or "want pdf" in msg or "need it as a pdf" in msg or "as pdf" in msg):
+        if not is_export and (msg == "pdf" or msg == "excel" or msg == "download" or "need pdf" in msg or "want pdf" in msg or "need it as a pdf" in msg or "as pdf" in msg or "as excel" in msg):
             is_export = True
 
         if is_export:
