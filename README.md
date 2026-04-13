@@ -142,6 +142,12 @@ npm install
 
 > **Note:** You do not need to run this manually if you use `start_server.py`. The launcher will automatically run `npm install` and start the node server for you on port 3001!
 
+#### How it works:
+* **Microservice Architecture**: Runs independently as a Node.js process using `Express` (Port 3001), serving as a REST API bridge for the main Python backend.
+* **Headless Automation**: Uses `whatsapp-web.js` to run a headless browser (Puppeteer) which mimics a real WhatsApp Web session, bypassing the need for an official Meta Business API.
+* **QR Authentication**: Upon initial execution, it provides a QR code generated via the `qrcode` package that you scan with your smartphone to link the session. Authentication tokens are cached locally so you don't need to rescan upon reboot.
+* **Autonomous Execution**: When AIRA triggers a notification (e.g., alert fee defaulters), it calls an MCP tool on the Flask backend, which rapidly dispatches a non-blocking HTTP POST request to this Node.js service for background execution.
+
 ---
 
 ### 📱 Accessing the App on Your Local Network (LAN)
@@ -246,6 +252,37 @@ AIRA works immediately **without any LLM** for common queries and reports:
 | **Activities** | "Extracurricular activities", "Technical activities" |
 
 Type **"help"** to see all supported built-in commands.
+
+### 🛠️ MCP Tools (Model Context Protocol)
+
+When running in Full AI Mode, AIRA exposes the following 24 MCP tools to the LLM to interact with the database and perform actions autonomously:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `get_student_info` | Retrieve detailed student profile including private data |
+| `get_attendance_summary` | Get attendance percentage for sections or individual students |
+| `update_attendance` | Update attendance status for a student on a specific date |
+| `get_marks` | Get marks for a student or an exam |
+| `get_fee_balance` | Get fee balance for a student |
+| `get_department_summary` | Get summary statistics for all departments |
+| `generate_student_profile_report` | Generate student profile report with CGPA, course, department |
+| `generate_fee_structure_report` | Generate fee structure report showing breakdown by course |
+| `generate_eligibility_report` | Generate eligibility criteria report showing match/unmatch status |
+| `generate_category_wise_report` | Generate category-wise student report |
+| `generate_scholarship_report` | Generate caste/community-wise scholarship report |
+| `generate_extracurricular_report`| Generate extracurricular activities report |
+| `generate_attendance_report` | Generate detailed attendance report with flexible filters |
+| `generate_marks_report` | Generate detailed marks report with flexible filters |
+| `get_top_students` | Get top N students by CGPA or attendance percentage |
+| `get_low_attendance` | Get students with attendance percentage below a threshold |
+| `get_fee_defaulters` | Get students who have pending fee balance (defaulters) |
+| `get_staff_by_department` | Get staff list for a department or all departments |
+| `get_student_by_name` | Search for a student by name (fuzzy match) |
+| `get_sections_list` | Get list of all sections with their course and department |
+| `get_combined_summary` | Get full college dashboard summary |
+| `generate_report` | Generate generic downloadable database reports (PDF/Excel) |
+| `generate_beautiful_pdf_report` | Generate a beautifully formatted PDF report with college letterhead |
+| `send_whatsapp_notification` | Send personalized WhatsApp messages (calls the Node.js microservice) |
 
 ### Full AI Mode — Ollama (Free & Local, Recommended)
 
@@ -398,8 +435,8 @@ All reports support **query parameter filters** and can be **exported to CSV** f
 | 8 | Attendance | Bulk attendance, summary, % tracking |
 | 9 | Fees | Fee structures, payments, scholarships |
 | 10 | Reports | 12 report types + CSV export (see Reports section) |
-| 11 | AIRA | AI assistant — 14 MCP tools, smart fallback, Ollama/Gemini |
-| 12 | Notifications | Parent notifications via email/SMS/WhatsApp |
+| 11 | AIRA | AI assistant — 24 MCP tools, smart fallback, Ollama/Gemini |
+| 12 | Notifications | Parent notifications via WhatsApp |
 
 ---
 
