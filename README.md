@@ -34,8 +34,19 @@ A full-stack college management application built with **Flask** (backend) and *
 
 ```powershell
 # From the project root — use the full path to xampp's mysql.exe
-& "C:\xampp\mysql\bin\mysql.exe" -u root college_management < Main/Backend/database/schema.sql
-& "C:\xampp\mysql\bin\mysql.exe" -u root college_management < Main/Backend/database/seed.sql
+# Note: the shell-style '<' redirection shown in many Linux/Mac examples does NOT work in PowerShell (it's reserved).
+# Two PowerShell-friendly options are shown below.
+
+# Option A — Use cmd.exe redirection (works exactly like the examples):
+cmd /c '"C:\xampp\mysql\bin\mysql.exe" -u root college_management < "Main\Backend\database\schema.sql"'
+cmd /c '"C:\xampp\mysql\bin\mysql.exe" -u root college_management < "Main\Backend\database\seed.sql"'
+
+# Option B — Use PowerShell's Get-Content and pipe the raw file contents into mysql (recommended):
+Get-Content "Main/Backend/database/schema.sql" -Raw | & "C:\xampp\mysql\bin\mysql.exe" -u root college_management
+Get-Content "Main/Backend/database/seed.sql" -Raw | & "C:\xampp\mysql\bin\mysql.exe" -u root college_management
+
+# If your MySQL root account has a password, add -p and you'll be prompted to enter it:
+# Get-Content "Main/Backend/database/schema.sql" -Raw | & "C:\xampp\mysql\bin\mysql.exe" -u root -p college_management
 ```
 
 > If the `college_management` database doesn't exist yet, create it first in phpMyAdmin or run:
